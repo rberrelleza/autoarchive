@@ -1,0 +1,32 @@
+{{define "config"}}{
+    "key": "hiparchiver",
+    "name": "Room Archiver Bot",
+    "description": "HipChat Room Archiver Bot",
+    "vendor": {
+        "name": "Atlassian Labs",
+        "url": "https://www.hipchat.com"
+    },
+    "links": {
+        "self": "{{.LocalBaseUrl}}/atlassian-connect.json",
+        "homepage": "{{.LocalBaseUrl}}/atlassian-connect.json"
+    },
+    "capabilities": {
+        "hipchatApiConsumer": {
+            "scopes": [
+                "view_group",
+                "manage_rooms",
+                "admin_room",
+                "send_notification"
+            ]
+        },
+        "installable": {
+            "allowGlobal": true,
+            "allowRoom": false,
+            "callbackUrl": "{{.LocalBaseUrl}}/installable"
+        },
+        "configurable": {
+             "url": "{{.LocalBaseUrl}}/config"
+        }
+    }
+}
+{{end}}

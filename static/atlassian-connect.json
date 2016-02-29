@@ -1,7 +1,7 @@
 {{define "config"}}{
     "key": "hiparchiver",
     "name": "Room Archiver Bot",
-    "description": "HipChat Room Archiver Bot",
+    "description": "Automatically archive your rooms after 90 days of inactivity",
     "vendor": {
         "name": "Atlassian Labs",
         "url": "https://www.hipchat.com"
@@ -23,9 +23,6 @@
             "allowGlobal": true,
             "allowRoom": false,
             "callbackUrl": "{{.LocalBaseUrl}}/installable"
-        },
-        "configurable": {
-             "url": "{{.LocalBaseUrl}}/config"
         }
     }
 }

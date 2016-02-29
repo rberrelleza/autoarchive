@@ -2,7 +2,6 @@ package main
 
 import (
   "github.com/jasonlvhit/gocron"
-  "os"
   "time"
   )
 
@@ -21,12 +20,10 @@ func auto_archive() {
   }
 }
 
-func StartCron() {
+func StartCron(schedule time.Duration) {
   go func() {
-    duration, error := time.ParseDuration(os.Getenv("WAIT_CHECKS"))
-    log.Infof("Archiver will run every %s", duration)
-    checkErr(error)
-    seconds := uint64(duration.Seconds())
+    seconds := uint64(schedule.Seconds())
+    log.Infof("Archiver will run every %s", schedule)
     gocron.Every(seconds).Seconds().Do(auto_archive)
     <- gocron.Start()
   }()

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"time"
 
 	"bitbucket.org/atlassianlabs/hipchat-golang-base/util"
 
@@ -64,16 +65,11 @@ func (c *Context) installable(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Context) removeInstallable(w http.ResponseWriter, r *http.Request) {
-	payload, err := util.DecodePostJSON(r, true)
-	if err != nil {
-		log.Errorf("Parsed auth data failed:%v\n", err)
-		 w.WriteHeader(http.StatusBadRequest)
-		 return
-	}
+	vars := mux.Vars(r)
+	oauthId := vars["oauthId"]
+	log.Infof("Removing addon for oauthId %s", oauthId)
 
-	groupId := int(payload["groupId"].(float64))
-	log.Infof("Removing addon for group %d", groupId)
-	_, err = DeleteGroup(groupId)
+	_, err := DeleteGroup(oauthId)
 	if err != nil {
 		log.Errorf("Failed to remove addon :%v\n", err)
 		 w.WriteHeader(http.StatusInternalServerError)
@@ -94,34 +90,43 @@ func (c *Context) routes() *mux.Router {
 
 	// HipChat specific API routes
 	r.Path("/installable").Methods("POST").HandlerFunc(c.installable)
-	r.Path("/installable").Methods("DELETE").HandlerFunc(c.removeInstallable)
+	r.Path("/installable/{oauthId}").Methods("DELETE").HandlerFunc(c.removeInstallable)
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(c.static)))
 	return r
 }
 
 func main() {
-	backend := logging.NewLogBackend(os.Stdout, "", 0)
-	backendFormatter := logging.NewBackendFormatter(backend, format)
-	backendLeveled := logging.AddModuleLevel(backendFormatter)
-	backendLeveled.SetLevel(logging.DEBUG, "")
-
-	logging.SetBackend(backendLeveled)
 
 	var (
 		port    = flag.String("port", "8080", "web server port")
 		static  = flag.String("static", "./static/", "static folder")
 		baseURL = flag.String("baseurl", os.Getenv("BASE_URL"), "local base url")
     nWorkers = flag.Int("n", 4, "The number of workers to start")
+		schedule = flag.String("schedule", "24h", "How often to evaluate idleness")
+		loglevel = flag.String("loglevel", "INFO", "Log level")
 	)
+
 	flag.Parse()
+
+	backend := logging.NewLogBackend(os.Stdout, "", 0)
+	backendFormatter := logging.NewBackendFormatter(backend, format)
+	backendLeveled := logging.AddModuleLevel(backendFormatter)
+	parsedLogLevel, error := logging.LogLevel(*loglevel)
+	checkErr(error)
+
+	backendLeveled.SetLevel(parsedLogLevel, "")
+
+	logging.SetBackend(backendLeveled)
 
 	c := &Context{ baseURL: *baseURL, static:  *static }
 
 	log.Infof("HipChat autoarchiver v0.10 - running on port:%v", *port)
 
   log.Infof("Starting the cronner")
-  StartCron()
+	duration, error := time.ParseDuration(*schedule)
+	checkErr(error)
+  StartCron(duration)
 
   log.Infof("Starting the dispatcher")
   StartDispatcher(*nWorkers)

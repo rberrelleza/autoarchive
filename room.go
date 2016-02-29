@@ -90,14 +90,14 @@ func archiveRoom(groupId int, roomId int, client *hipchat.Client, idleDays int){
     Owner: owner_id,
   }
 
-  notification := fmt.Sprintf("@%s This room was archived since it has been idle for %d days. Go to https://hipchat.com/rooms/archive/%d to unarchive.", room.Owner.MentionName, idleDays, roomId)
+  message := fmt.Sprintf("@%s This room was archived since it has been inactive for %d days. Go to https://hipchat.com/rooms/archive/%d to unarchive it.", room.Owner.MentionName, idleDays, roomId)
 
 
   if dryRun {
-    log.Infof("Would've archived gid-%d rid-%d: %s", groupId, roomId, notification)
+    log.Infof("Would've archived gid-%d rid-%d: %s", groupId, roomId, message)
   } else {
 
-    notifyArchival(roomId, notification, client)
+    notifyArchival(roomId, message, client)
 
     resp, err := client.Room.Update(strconv.Itoa(roomId), &updateRequest)
 
@@ -105,16 +105,15 @@ func archiveRoom(groupId int, roomId int, client *hipchat.Client, idleDays int){
       log.Errorf("Client.Room.Update returned an error when archiving")
       contents, err := ioutil.ReadAll(resp.Body)
       log.Errorf("%s %s", contents, err)
-      panic(err)
     } else {
       log.Infof("Archived gid-%d rid-%d", groupId, roomId)
     }
   }
 }
 
-func notifyArchival(roomId int, notification string, client *hipchat.Client){
+func notifyArchival(roomId int, message string, client *hipchat.Client){
   notificationRequest := hipchat.NotificationRequest {
-    Message: notification,
+    Message: message,
     Notify: true,
     MessageFormat: "text",
   }
@@ -124,6 +123,5 @@ func notifyArchival(roomId int, notification string, client *hipchat.Client){
     log.Errorf("Client.Room.Notification returned an error when archiving %v", resp)
     contents, err := ioutil.ReadAll(resp.Body)
     log.Errorf("%s %s", contents, err)
-    panic(contents)
   }
 }

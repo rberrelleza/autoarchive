@@ -51,13 +51,14 @@ func (w Worker) Start() {
               []string{hipchat.ScopeManageRooms, hipchat.ScopeViewGroup, hipchat.ScopeSendNotification, hipchat.ScopeAdminRoom })
 
           	if err != nil {
-          		log.Fatalf("Client.GetAccessToken returns an error %v", err)
-          	}
-
-            client := token.CreateClient()
-            rooms := getRooms(work.gid, client)
-            for _, room := range rooms {
-              maybeArchiveRoom(work.gid, room.ID, client)
+              // this typically means the group uninstalled the plugin
+          		log.Errorf("Client.GetAccessToken returns an error %v", err)
+          	} else {
+              client := token.CreateClient()
+              rooms := getRooms(work.gid, client)
+              for _, room := range rooms {
+                maybeArchiveRoom(work.gid, room.ID, client)
+              }
             }
           case <-w.QuitChan:
             // We have been asked to stop.

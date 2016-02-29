@@ -63,6 +63,26 @@ func (c *Context) installable(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode([]string{"OK"})
 }
 
+func (c *Context) removeInstallable(w http.ResponseWriter, r *http.Request) {
+	payload, err := util.DecodePostJSON(r, true)
+	if err != nil {
+		log.Errorf("Parsed auth data failed:%v\n", err)
+		 w.WriteHeader(http.StatusBadRequest)
+		 return
+	}
+
+	groupId := int(payload["groupId"].(float64))
+	log.Infof("Removing addon for group %d", groupId)
+	_, err = DeleteGroup(groupId)
+	if err != nil {
+		log.Errorf("Failed to remove addon :%v\n", err)
+		 w.WriteHeader(http.StatusInternalServerError)
+		 return
+	} else {
+			json.NewEncoder(w).Encode([]string{"OK"})
+	}
+}
+
 // routes all URL routes for app add-on
 func (c *Context) routes() *mux.Router {
 	r := mux.NewRouter()
@@ -74,6 +94,7 @@ func (c *Context) routes() *mux.Router {
 
 	// HipChat specific API routes
 	r.Path("/installable").Methods("POST").HandlerFunc(c.installable)
+	r.Path("/installable").Methods("DELETE").HandlerFunc(c.removeInstallable)
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(c.static)))
 	return r
@@ -83,11 +104,9 @@ func main() {
 	backend := logging.NewLogBackend(os.Stdout, "", 0)
 	backendFormatter := logging.NewBackendFormatter(backend, format)
 	backendLeveled := logging.AddModuleLevel(backendFormatter)
-	backendLeveled.SetLevel(logging.INFO, "")
+	backendLeveled.SetLevel(logging.DEBUG, "")
 
 	logging.SetBackend(backendLeveled)
-
-
 
 	var (
 		port    = flag.String("port", "8080", "web server port")

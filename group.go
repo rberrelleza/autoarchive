@@ -58,6 +58,17 @@ func GetGroup(groupId int) (*Group, error) {
   return &retval, err
 }
 
+func DeleteGroup(groupId int) (*Group, error) {
+  dbinfo := fmt.Sprintf("user=%s dbname=%s sslmode=disable", DB_USER, DB_NAME)
+  const query = `DELETE FROM groupinfo where groupid = $1 LIMIT 1  RETURNING groupid, oauthId, oauthSecret`
+  db, err := sql.Open("postgres", dbinfo)
+	checkErr(err)
+  var retval Group
+  err = db.QueryRow(query, groupId).Scan(
+    &retval.groupId, &retval.oauthId, &retval.oauthSecret)
+  return &retval, err
+}
+
 func AddGroup(groupId int, oauthId string, oauthSecret string) (error) {
   log.Debugf("Adding group %d", groupId)
   dbinfo := fmt.Sprintf("user=%s dbname=%s sslmode=disable", DB_USER, DB_NAME)

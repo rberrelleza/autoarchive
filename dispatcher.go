@@ -2,7 +2,7 @@ package main
 
 var WorkerQueue chan chan WorkRequest
 
-func StartDispatcher(nworkers int) {
+func StartDispatcher(context *Context, nworkers int) {
   // First, initialize the channel we are going to but the workers' work channels into.
   WorkerQueue = make(chan chan WorkRequest, nworkers)
 
@@ -10,7 +10,7 @@ func StartDispatcher(nworkers int) {
   for i := 0; i<nworkers; i++ {
     log.Debug("Starting worker", i+1)
     worker := NewWorker(i+1, WorkerQueue)
-    worker.Start()
+    worker.Start(context)
   }
 
   go func() {

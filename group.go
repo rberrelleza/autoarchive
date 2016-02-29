@@ -12,15 +12,10 @@ type Group struct {
 	oauthSecret string
 }
 
-const (
-    DB_USER     = "rberrelleza"
-    DB_NAME     = "rberrelleza"
-)
-
-func GetAllGroups() ([]Group, error) {
+func GetAllGroups(context *Context) ([]Group, error) {
   log.Debug("Getting all groups")
-  dbinfo := fmt.Sprintf("user=%s dbname=%s sslmode=disable", DB_USER, DB_NAME)
-	db, err := sql.Open("postgres", dbinfo)
+  dbinfo := getConnectionString(context)
+  db, err := sql.Open("postgres", dbinfo)
 	checkErr(err)
   defer db.Close()
 
@@ -43,10 +38,10 @@ func GetAllGroups() ([]Group, error) {
 return groups, err
 }
 
-func GetGroup(groupId int) (*Group, error) {
+func GetGroup(context *Context, groupId int) (*Group, error) {
   log.Debugf("Getting group %d", groupId)
-  dbinfo := fmt.Sprintf("user=%s dbname=%s sslmode=disable", DB_USER, DB_NAME)
-	db, err := sql.Open("postgres", dbinfo)
+  dbinfo := getConnectionString(context)
+  db, err := sql.Open("postgres", dbinfo)
 	checkErr(err)
   defer db.Close()
 
@@ -58,21 +53,23 @@ func GetGroup(groupId int) (*Group, error) {
   return &retval, err
 }
 
-func DeleteGroup(oauthId string) (*Group, error) {
-  dbinfo := fmt.Sprintf("user=%s dbname=%s sslmode=disable", DB_USER, DB_NAME)
-  const query = `DELETE FROM groupinfo where oauthId = $1 RETURNING groupid, oauthId, oauthSecret`
+func DeleteGroup(context *Context, oauthId string) (*Group, error) {
+  dbinfo := getConnectionString(context)
   db, err := sql.Open("postgres", dbinfo)
 	checkErr(err)
+  defer db.Close()
+
   var retval Group
+  const query = `DELETE FROM groupinfo where oauthId = $1 RETURNING groupid, oauthId, oauthSecret`
   err = db.QueryRow(query, oauthId).Scan(
     &retval.groupId, &retval.oauthId, &retval.oauthSecret)
   return &retval, err
 }
 
-func AddGroup(groupId int, oauthId string, oauthSecret string) (error) {
+func AddGroup(context *Context, groupId int, oauthId string, oauthSecret string) (error) {
   log.Debugf("Adding group %d", groupId)
-  dbinfo := fmt.Sprintf("user=%s dbname=%s sslmode=disable", DB_USER, DB_NAME)
-	db, err := sql.Open("postgres", dbinfo)
+  dbinfo := getConnectionString(context)
+  db, err := sql.Open("postgres", dbinfo)
 	checkErr(err)
   defer db.Close()
 
@@ -80,4 +77,8 @@ func AddGroup(groupId int, oauthId string, oauthSecret string) (error) {
   const query = `INSERT INTO groupinfo(groupId,oauthId,oauthSecret) VALUES($1,$2,$3) RETURNING groupId`
   err = db.QueryRow(query, groupId, oauthId, oauthSecret).Scan(&returned_gid)
   return err
+}
+
+func getConnectionString(context *Context) (string) {
+  return fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", context.pguser, context.pgpass, context.pghost, context.pgdatabase)
 }

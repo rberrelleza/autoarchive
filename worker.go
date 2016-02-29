@@ -27,7 +27,7 @@ type Worker struct {
 
 // This function "starts" the worker by starting a goroutine, that is
 // an infinite "for-select" loop.
-func (w Worker) Start() {
+func (w Worker) Start(context *Context) {
     go func() {
       for {
         // Add ourselves into the worker queue.
@@ -38,7 +38,7 @@ func (w Worker) Start() {
             // Receive a work request.
             log.Debugf("worker%d: Received work request", w.ID)
 
-            group, error := GetGroup(work.gid)
+            group, error := GetGroup(context, work.gid)
             checkErr(error)
             credentials := hipchat.ClientCredentials{
 	              ClientID:     group.oauthId,

@@ -7,8 +7,8 @@ import (
 
 var WorkQueue = make(chan WorkRequest, 100)
 
-func auto_archive() {
-  groups, err := GetAllGroups()
+func auto_archive(context *Context) {
+  groups, err := GetAllGroups(context)
   checkErr(err)
 
   log.Debugf("Found %d groups", len(groups))
@@ -20,11 +20,11 @@ func auto_archive() {
   }
 }
 
-func StartCron(schedule time.Duration) {
+func StartCron(context *Context, schedule time.Duration) {
   go func() {
     seconds := uint64(schedule.Seconds())
     log.Infof("Archiver will run every %s", schedule)
-    gocron.Every(seconds).Seconds().Do(auto_archive)
+    gocron.Every(seconds).Seconds().Do(auto_archive, context)
     <- gocron.Start()
   }()
 }

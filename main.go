@@ -23,8 +23,12 @@ var format = logging.MustStringFormatter(
 
 // Context keep context of the running application
 type Context struct {
-	baseURL string
-	static  string
+	baseURL    string
+	static     string
+	pghost     string
+	pguser     string
+	pgpass     string
+	pgdatabase string
 }
 
 func (c *Context) healthcheck(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +60,7 @@ func (c *Context) installable(w http.ResponseWriter, r *http.Request) {
 
 	groupId := int(payload["groupId"].(float64))
 
-	err = AddGroup(groupId, payload["oauthId"].(string), payload["oauthSecret"].(string))
+	err = AddGroup(c, groupId, payload["oauthId"].(string), payload["oauthSecret"].(string))
 	checkErr(err)
 	log.Infof("Added group gid-%d", groupId)
 
@@ -69,7 +73,7 @@ func (c *Context) removeInstallable(w http.ResponseWriter, r *http.Request) {
 	oauthId := vars["oauthId"]
 	log.Infof("Removing addon for oauthId %s", oauthId)
 
-	_, err := DeleteGroup(oauthId)
+	_, err := DeleteGroup(c, oauthId)
 	if err != nil {
 		log.Errorf("Failed to remove addon :%v\n", err)
 		 w.WriteHeader(http.StatusInternalServerError)
@@ -105,6 +109,10 @@ func main() {
     nWorkers = flag.Int("n", 4, "The number of workers to start")
 		schedule = flag.String("schedule", "24h", "How often to evaluate idleness")
 		loglevel = flag.String("loglevel", "INFO", "Log level")
+		pghost = flag.String("pghost", "localhost", "PG Host")
+		pgdatabase = flag.String("pgdatabase", "hiparchiver", "PG Database")
+		pguser = flag.String("pguser", "postgres", "PG User")
+		pgpass = flag.String("pgpass", "postgres", "PG Password")
 	)
 
 	flag.Parse()
@@ -119,19 +127,20 @@ func main() {
 
 	logging.SetBackend(backendLeveled)
 
-	c := &Context{ baseURL: *baseURL, static:  *static }
+	context := &Context{ baseURL: *baseURL, static:  *static, pghost: *pghost,
+	 	pguser: *pguser, pgpass: *pgpass, pgdatabase: *pgdatabase}
 
-	log.Infof("HipChat autoarchiver v0.10 - running on port:%v", *port)
+	log.Infof("HipChat autoarchiver v0.0.1 - running on port:%v", *port)
 
   log.Infof("Starting the cronner")
 	duration, error := time.ParseDuration(*schedule)
 	checkErr(error)
-  StartCron(duration)
+  StartCron(context, duration)
 
   log.Infof("Starting the dispatcher")
-  StartDispatcher(*nWorkers)
+  StartDispatcher(context, *nWorkers)
 
-  r := c.routes()
+  r := context.routes()
 	http.Handle("/", r)
   log.Infof("Starting the webserver")
 	http.ListenAndServe(":"+*port, nil)

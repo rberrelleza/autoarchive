@@ -1,7 +1,7 @@
 package main
 
 import (
-  "github.com/rberrelleza/hipchat-go/hipchat"
+  "github.com/tbruyelle/hipchat-go/hipchat"
 )
 
 // NewWorker creates, and returns a new Worker object. Its only argument

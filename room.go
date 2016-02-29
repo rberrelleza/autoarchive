@@ -1,7 +1,7 @@
 package main
 
 import (
-  "github.com/rberrelleza/hipchat-go/hipchat"
+  "github.com/tbruyelle/hipchat-go/hipchat"
   "strconv"
   "time"
   "os"

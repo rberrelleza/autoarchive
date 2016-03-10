@@ -18,7 +18,7 @@ import (
 
 var log = logging.MustGetLogger("main.go")
 var format = logging.MustStringFormatter(
-    `%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
+	`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
 )
 
 // Context keep context of the running application
@@ -32,8 +32,8 @@ type Context struct {
 }
 
 func (c *Context) healthcheck(w http.ResponseWriter, r *http.Request) {
-  work := WorkRequest{gid: 1}
-  WorkQueue <- work
+	work := WorkRequest{gid: 1}
+	WorkQueue <- work
 
 	json.NewEncoder(w).Encode([]string{"OK"})
 }
@@ -54,8 +54,8 @@ func (c *Context) installable(w http.ResponseWriter, r *http.Request) {
 	payload, err := util.DecodePostJSON(r, true)
 	if err != nil {
 		log.Errorf("Parsed auth data failed:%v\n", err)
-		 w.WriteHeader(http.StatusBadRequest)
-		 return
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	groupId := int(payload["groupId"].(float64))
@@ -76,10 +76,10 @@ func (c *Context) removeInstallable(w http.ResponseWriter, r *http.Request) {
 	_, err := DeleteGroup(c, oauthId)
 	if err != nil {
 		log.Errorf("Failed to remove addon :%v\n", err)
-		 w.WriteHeader(http.StatusInternalServerError)
-		 return
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	} else {
-			json.NewEncoder(w).Encode([]string{"OK"})
+		json.NewEncoder(w).Encode([]string{"OK"})
 	}
 }
 
@@ -88,7 +88,7 @@ func (c *Context) routes() *mux.Router {
 	r := mux.NewRouter()
 	r.Path("/healthcheck").Methods("GET").HandlerFunc(c.healthcheck)
 
-  //descriptor for Atlassian Connect
+	//descriptor for Atlassian Connect
 	r.Path("/").Methods("GET").HandlerFunc(c.atlassianConnect)
 	r.Path("/atlassian-connect.json").Methods("GET").HandlerFunc(c.atlassianConnect)
 
@@ -103,16 +103,16 @@ func (c *Context) routes() *mux.Router {
 func main() {
 
 	var (
-		port    = flag.String("port", "8080", "web server port")
-		static  = flag.String("static", "./static/", "static folder")
-		baseURL = flag.String("baseurl", os.Getenv("BASE_URL"), "local base url")
-    nWorkers = flag.Int("n", 4, "The number of workers to start")
-		schedule = flag.String("schedule", "24h", "How often to evaluate idleness")
-		loglevel = flag.String("loglevel", "INFO", "Log level")
-		pghost = flag.String("pghost", "localhost", "PG Host")
+		port       = flag.String("port", "8080", "web server port")
+		static     = flag.String("static", "./static/", "static folder")
+		baseURL    = flag.String("baseurl", os.Getenv("BASE_URL"), "local base url")
+		nWorkers   = flag.Int("n", 4, "The number of workers to start")
+		schedule   = flag.String("schedule", "24h", "How often to evaluate idleness")
+		loglevel   = flag.String("loglevel", "INFO", "Log level")
+		pghost     = flag.String("pghost", "localhost", "PG Host")
 		pgdatabase = flag.String("pgdatabase", "hiparchiver", "PG Database")
-		pguser = flag.String("pguser", "postgres", "PG User")
-		pgpass = flag.String("pgpass", "postgres", "PG Password")
+		pguser     = flag.String("pguser", "postgres", "PG User")
+		pgpass     = flag.String("pgpass", "postgres", "PG Password")
 	)
 
 	flag.Parse()
@@ -127,27 +127,27 @@ func main() {
 
 	logging.SetBackend(backendLeveled)
 
-	context := &Context{ baseURL: *baseURL, static:  *static, pghost: *pghost,
-	 	pguser: *pguser, pgpass: *pgpass, pgdatabase: *pgdatabase}
+	context := &Context{baseURL: *baseURL, static: *static, pghost: *pghost,
+		pguser: *pguser, pgpass: *pgpass, pgdatabase: *pgdatabase}
 
 	log.Infof("HipChat autoarchiver v0.0.1 - running on port:%v", *port)
 
-  log.Infof("Starting the cronner")
+	log.Infof("Starting the cronner")
 	duration, error := time.ParseDuration(*schedule)
 	checkErr(error)
-  StartCron(context, duration)
+	StartCron(context, duration)
 
-  log.Infof("Starting the dispatcher")
-  StartDispatcher(context, *nWorkers)
+	log.Infof("Starting the dispatcher")
+	StartDispatcher(context, *nWorkers)
 
-  r := context.routes()
+	r := context.routes()
 	http.Handle("/", r)
-  log.Infof("Starting the webserver")
+	log.Infof("Starting the webserver")
 	http.ListenAndServe(":"+*port, nil)
 }
 
 func checkErr(err error) {
-    if err != nil {
-        panic(err)
-    }
+	if err != nil {
+		panic(err)
+	}
 }

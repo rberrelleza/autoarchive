@@ -4,10 +4,39 @@ import (
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
+var WorkerQueue chan chan WorkRequest
+
+func (context *Context) RunDispatcher() {
+	// First, initialize the channel we are going to but the workers' work channels into.
+	WorkerQueue = make(chan chan WorkRequest, context.nworkers)
+
+	// Now, create all of our workers.
+	for i := 0; i < context.nworkers; i++ {
+		log.Infof("Starting worker-%d", i+1)
+		worker := newWorker(i+1, WorkerQueue)
+		worker.start(context)
+	}
+
+	go func() {
+		for {
+			select {
+			case work := <-WorkQueue:
+				log.Debug("Received work request")
+				go func() {
+					worker := <-WorkerQueue
+
+					log.Debug("Dispatching work request")
+					worker <- work
+				}()
+			}
+		}
+	}()
+}
+
 // NewWorker creates, and returns a new Worker object. Its only argument
 // is a channel that the worker can add itself to whenever it is done its
 // work.
-func NewWorker(id int, workerQueue chan chan WorkRequest) Worker {
+func newWorker(id int, workerQueue chan chan WorkRequest) Worker {
 	// Create, and return the worker.
 	worker := Worker{
 		ID:          id,
@@ -27,7 +56,7 @@ type Worker struct {
 
 // This function "starts" the worker by starting a goroutine, that is
 // an infinite "for-select" loop.
-func (w Worker) Start(context *Context) {
+func (w Worker) start(context *Context) {
 	go func() {
 		for {
 			// Add ourselves into the worker queue.
@@ -72,7 +101,7 @@ func (w Worker) Start(context *Context) {
 // Stop tells the worker to stop listening for work requests.
 //
 // Note that the worker will only stop *after* it has finished its work.
-func (w Worker) Stop() {
+func (w Worker) stop() {
 	go func() {
 		w.QuitChan <- true
 	}()

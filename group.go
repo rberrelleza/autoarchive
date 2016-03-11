@@ -6,12 +6,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Group struct {
-	groupId     int
-	oauthId     string
-	oauthSecret string
-}
-
 func GetAllGroups(context *Context) ([]Group, error) {
 	log.Debug("Getting all groups")
 	dbinfo := getConnectionString(context)
@@ -45,10 +39,25 @@ func GetGroup(context *Context, groupId int) (*Group, error) {
 	checkErr(err)
 	defer db.Close()
 
-	const query = `SELECT groupid, oauthId, oauthSecret from groupinfo where groupid = $1`
+	const query = `SELECT groupid, oauthId, oauthSecret, threshold from groupinfo where groupid = $1`
 	var retval Group
 	err = db.QueryRow(query, groupId).Scan(
-		&retval.groupId, &retval.oauthId, &retval.oauthSecret)
+		&retval.groupId, &retval.oauthId, &retval.oauthSecret, &retval.threshold)
+
+	return &retval, err
+}
+
+func GetGroupByOauthId(context *Context, oauthId string) (*Group, error) {
+	log.Debugf("Getting group by oauthId")
+	dbinfo := getConnectionString(context)
+	db, err := sql.Open("postgres", dbinfo)
+	checkErr(err)
+	defer db.Close()
+
+	const query = `SELECT groupid, oauthId, oauthSecret, threshold from groupinfo where oauthId = $1`
+	var retval Group
+	err = db.QueryRow(query, oauthId).Scan(
+		&retval.groupId, &retval.oauthId, &retval.oauthSecret, &retval.threshold)
 
 	return &retval, err
 }
@@ -66,7 +75,7 @@ func DeleteGroup(context *Context, oauthId string) (*Group, error) {
 	return &retval, err
 }
 
-func AddGroup(context *Context, groupId int, oauthId string, oauthSecret string) error {
+func AddGroup(context *Context, groupId int, oauthId string, oauthSecret string, threshold int) error {
 	log.Debugf("Adding group %d", groupId)
 	dbinfo := getConnectionString(context)
 	db, err := sql.Open("postgres", dbinfo)
@@ -74,8 +83,8 @@ func AddGroup(context *Context, groupId int, oauthId string, oauthSecret string)
 	defer db.Close()
 
 	var returned_gid int
-	const query = `INSERT INTO groupinfo(groupId,oauthId,oauthSecret) VALUES($1,$2,$3) RETURNING groupId`
-	err = db.QueryRow(query, groupId, oauthId, oauthSecret).Scan(&returned_gid)
+	const query = `INSERT INTO groupinfo(groupId,oauthId,oauthSecret,threshold) VALUES($1,$2,$3,$4) ON CONFLICT(groupid) DO UPDATE SET oauthId=$2,oauthSecret=$3,threshold=$4 RETURNING groupId`
+	err = db.QueryRow(query, groupId, oauthId, oauthSecret, threshold).Scan(&returned_gid)
 	return err
 }
 

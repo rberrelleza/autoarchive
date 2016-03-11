@@ -1,0 +1,15 @@
+{{define "config"}}
+<html>
+  <head>
+    <script src="https://www.hipchat.com/atlassian-connect/all.js"></script>
+    <link rel="stylesheet" href="https://www.hipchat.com/atlassian-connect/all.css">
+  </head>
+  <body>
+    <form action="/configurable">
+    Hello World!
+    <input type="hidden" value="{{.Client}}" name="client" />
+    <input type="submit" />
+    </form>
+  </body>
+</html>
+{{end}}

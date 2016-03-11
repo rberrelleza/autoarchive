@@ -1,4 +1,4 @@
-{{define "config"}}{
+{{define "connect"}}{
     "key": "hiparchiver",
     "name": "Room Archiver",
     "description": "Automatically archive your rooms after 90 days of inactivity",
@@ -27,7 +27,11 @@
             "allowGlobal": true,
             "allowRoom": false,
             "callbackUrl": "{{.LocalBaseUrl}}/installable"
+        },
+        "configurable": {
+            "url": "{{.LocalBaseUrl}}/configurable"
         }
+
     }
 }
 {{end}}

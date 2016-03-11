@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/http"
 	"path"
+	"strconv"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
@@ -106,7 +107,7 @@ func (c *Context) installable(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Context) configurable(w http.ResponseWriter, r *http.Request) {
-	log.Debugf("updateConfigurable init")
+	log.Debugf("configurable init")
 	token, auth_error := c.authenticate(r)
 	if auth_error != nil {
 		log.Errorf("configurable authentication error %s", auth_error)
@@ -114,13 +115,17 @@ func (c *Context) configurable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debugf("%+v\n", token)
   oauthId, _ := token.Claims["iss"].(string);
+	group, err := GetGroupByOauthId(c, oauthId)
+	if (err != nil) {
+		log.Errorf("Couldn't find group with oauthId %s", oauthId)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	lp := path.Join("./static", "configurable.hbs")
 	vals := map[string]string{
-		"LocalBaseUrl": c.baseURL,
-		"Client": oauthId,
+		"Threshold": strconv.Itoa(group.threshold),
 	}
 
 	tmpl, err := template.ParseFiles(lp)
@@ -130,19 +135,48 @@ func (c *Context) configurable(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "config", vals)
 }
 
-func (c *Context) updateConfigurable(w http.ResponseWriter, r *http.Request) {
+func (c *Context) postConfigurable(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("updateConfigurable init")
-	_, auth_error := c.authenticate(r)
+	token, auth_error := c.authenticate(r)
 	if auth_error != nil {
-		log.Debugf("updateConfigurable authentication error %s", auth_error)
+		log.Debugf("postConfigurable authentication error %s", auth_error)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	vars := mux.Vars(r)
-	jsonString, _ := json.Marshal(vars)
-	log.Debugf(string(jsonString))
-	json.NewEncoder(w).Encode([]string{"OK"})
+	oauthId, _ := token.Claims["iss"].(string)
+	strThreshold := r.FormValue("threshold")
+
+	if (strThreshold == "") {
+		log.Debugf("postConfigurable bad values")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	threshold, err := strconv.Atoi(strThreshold)
+	if (err != nil) {
+		log.Debugf("postConfigurable threshold wasn't an integer")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	group, err := UpdateThreshold(c, oauthId, threshold)
+	if (err != nil){
+		log.Errorf("postConfigurable failed to update threshold: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	lp := path.Join("./static", "configurable.hbs")
+	vals := map[string]string{
+		"LocalBaseUrl": c.baseURL,
+		"Threshold": strconv.Itoa(group.threshold),
+	}
+
+	tmpl, err := template.ParseFiles(lp)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	tmpl.ExecuteTemplate(w, "config", vals)
 }
 
 func (c *Context) removeInstallable(w http.ResponseWriter, r *http.Request) {
@@ -182,6 +216,7 @@ func (c *Context) routes() *mux.Router {
 	r.Path("/installable").Methods("POST").HandlerFunc(c.installable)
 	r.Path("/installable/{oauthId}").Methods("DELETE").HandlerFunc(c.removeInstallable)
 	r.Path("/configurable").Methods("GET").HandlerFunc(c.configurable)
+	r.Path("/configurable").Methods("POST").HandlerFunc(c.postConfigurable)
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
 	return r

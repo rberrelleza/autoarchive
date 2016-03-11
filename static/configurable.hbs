@@ -3,13 +3,49 @@
   <head>
     <script src="https://www.hipchat.com/atlassian-connect/all.js"></script>
     <link rel="stylesheet" href="https://www.hipchat.com/atlassian-connect/all.css">
+    <link rel="stylesheet" href="//aui-cdn.atlassian.com/aui-adg/5.9.14/css/aui.min.css" media="all">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script src="//aui-cdn.atlassian.com/aui-adg/5.9.14/js/aui.min.js"></script>
   </head>
-  <body>
-    <form action="/configurable">
-    Hello World!
-    <input type="hidden" value="{{.Client}}" name="client" />
-    <input type="submit" />
-    </form>
+  <body class="addon">
+    <div id="page">
+      <section id="content" role="main">
+         <div class="aui-page-panel">
+            <div class="aui-page-panel-inner">
+              <section class="aui-page-panel-content">
+                <form  class="aui" id="form" method="POST">
+                  <label for="threshold">Automatically archive your rooms after they haven't been used for:</label>
+                  <select class="select medium-field" id="threshold" name="threshold">
+                     <option value="15" {{if eq "15" .Threshold}}selected{{end}}>15 days</option>
+                     <option value="30" {{if eq "30" .Threshold}}selected{{end}}>30 days</option>
+                     <option value="45" {{if eq "45" .Threshold}}selected{{end}}>45 days</option>
+                     <option value="90" {{if eq "90" .Threshold}}selected{{end}}>90 days</option>
+                  </select>
+                  <button id="save" class="aui-button aui-button-primary">Save</button>
+                </form>
+              <hr />
+              <div id="explanation">
+                <b>How does the addon decide when to archive?</b>
+                <p>Once a day, the auto archiver will check the last active time of your room,
+                  and if it exceeds the selected threshold, it will be activated.</p>
+                <p>The last activate date of a room is updated when any of the following events happen:</p>
+                <ul>
+                  <li>A user or an addon sends a message.</li>
+                  <li>The topic of the room is updated.</li>
+                  <li>The privacy of the room is updated.</li>
+                  <li>Guest access is enabled or disabled.</li>
+                  <li>A new member is invited to the group.</li>
+                </ul>
+
+                <p>When the room is archived, the addon will send a final notification to the room administrator.
+                She can then decide if she wants to unarchive the room by going to the room administration page.</p>
+                <img src="https://s3.amazonaws.com/uploads.hipchat.com/167300/1202992/QcR22YNhxpWjqij/archived.png"
+                  alt="room autoarchived" width="800px"/>
+              </div>
+           </section>
+        </div>
+      </section>
+    </div>
   </body>
 </html>
 {{end}}

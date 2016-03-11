@@ -1,7 +1,7 @@
 {{define "connect"}}{
     "key": "hiparchiver",
-    "name": "Room Archiver",
-    "description": "Automatically archive your rooms after 90 days of inactivity",
+    "name": "Auto Archiver",
+    "description": "Automatically archive your rooms after they have bee idle for a while.",
     "vendor": {
         "name": "Ramiro Berrelleza",
         "url": "http://ramiroberrelleza.com"

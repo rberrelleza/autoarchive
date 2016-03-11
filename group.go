@@ -88,6 +88,20 @@ func AddGroup(context *Context, groupId int, oauthId string, oauthSecret string,
 	return err
 }
 
+func UpdateThreshold(context *Context, oauthId string, threshold int) (*Group, error) {
+	log.Debugf("UpdateThreshold of oauthid-%s to %d", oauthId, threshold)
+	dbinfo := getConnectionString(context)
+	db, err := sql.Open("postgres", dbinfo)
+	checkErr(err)
+	defer db.Close()
+
+	var retval Group
+	const query = `UPDATE groupinfo SET threshold=$1 where oauthId=$2  RETURNING groupid, oauthId, oauthSecret, threshold`
+	err = db.QueryRow(query, threshold, oauthId).Scan(
+		&retval.groupId, &retval.oauthId, &retval.oauthSecret, &retval.threshold)
+	return &retval, err
+}
+
 func getConnectionString(context *Context) string {
 	return fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", context.pguser, context.pgpass, context.pghost, context.pgdatabase)
 }

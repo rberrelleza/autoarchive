@@ -46,17 +46,17 @@ func (context *Context) authenticate(r *http.Request) (*jwt.Token, error) {
 		}
 
 		issuer, ok := token.Claims["iss"].(string)
-		if (!ok) {
+		if !ok {
 			return nil, fmt.Errorf("JWT claim did not contain the issuer (iss) claim")
 		}
 		group, err := GetGroupByOauthId(context, issuer)
 
-		if (err != nil){
+		if err != nil {
 			log.Debugf("Couldn't find group with oauthId-%s", issuer)
 			return nil, fmt.Errorf("Request can't be verified without a valid OAuth secret")
 		}
 
-		if (token.Header["alg"] != "HS256") {
+		if token.Header["alg"] != "HS256" {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 
@@ -115,9 +115,9 @@ func (c *Context) configurable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  oauthId, _ := token.Claims["iss"].(string);
+	oauthId, _ := token.Claims["iss"].(string)
 	group, err := GetGroupByOauthId(c, oauthId)
-	if (err != nil) {
+	if err != nil {
 		log.Errorf("Couldn't find group with oauthId %s", oauthId)
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -147,20 +147,20 @@ func (c *Context) postConfigurable(w http.ResponseWriter, r *http.Request) {
 	oauthId, _ := token.Claims["iss"].(string)
 	strThreshold := r.FormValue("threshold")
 
-	if (strThreshold == "") {
+	if strThreshold == "" {
 		log.Debugf("postConfigurable bad values")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	threshold, err := strconv.Atoi(strThreshold)
-	if (err != nil) {
+	if err != nil {
 		log.Debugf("postConfigurable threshold wasn't an integer")
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
 	group, err := UpdateThreshold(c, oauthId, threshold)
-	if (err != nil){
+	if err != nil {
 		log.Errorf("postConfigurable failed to update threshold: %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -169,7 +169,7 @@ func (c *Context) postConfigurable(w http.ResponseWriter, r *http.Request) {
 	lp := path.Join("./static", "configurable.hbs")
 	vals := map[string]string{
 		"LocalBaseUrl": c.baseURL,
-		"Threshold": strconv.Itoa(group.threshold),
+		"Threshold":    strconv.Itoa(group.threshold),
 	}
 
 	tmpl, err := template.ParseFiles(lp)

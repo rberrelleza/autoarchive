@@ -1,5 +1,9 @@
 package main
 
+import (
+	"github.com/dgrijalva/jwt-go"
+)
+
 type WorkRequest struct {
 	gid int
 }
@@ -12,6 +16,7 @@ type Context struct {
 	pgpass     string
 	pgdatabase string
 	nworkers   int
+	token      *jwt.Token
 }
 
 type Group struct {
@@ -19,4 +24,11 @@ type Group struct {
 	oauthId     string
 	oauthSecret string
 	threshold   int
+}
+
+type Worker struct {
+	ID          int
+	Work        chan WorkRequest
+	WorkerQueue chan chan WorkRequest
+	QuitChan    chan bool
 }

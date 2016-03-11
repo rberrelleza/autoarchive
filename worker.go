@@ -47,13 +47,6 @@ func newWorker(id int, workerQueue chan chan WorkRequest) Worker {
 	return worker
 }
 
-type Worker struct {
-	ID          int
-	Work        chan WorkRequest
-	WorkerQueue chan chan WorkRequest
-	QuitChan    chan bool
-}
-
 // This function "starts" the worker by starting a goroutine, that is
 // an infinite "for-select" loop.
 func (w Worker) start(context *Context) {
@@ -68,7 +61,10 @@ func (w Worker) start(context *Context) {
 				log.Debugf("worker%d: Received work request", w.ID)
 
 				group, error := GetGroup(context, work.gid)
-				checkErr(error)
+				if error != nil {
+					log.Error("Failed to get gid-%d: %s", work.gid, error)
+				}
+
 				credentials := hipchat.ClientCredentials{
 					ClientID:     group.oauthId,
 					ClientSecret: group.oauthSecret,
@@ -84,9 +80,13 @@ func (w Worker) start(context *Context) {
 					log.Errorf("Client.GetAccessToken returns an error %v", err)
 				} else {
 					client := token.CreateClient()
-					rooms := getRooms(work.gid, client)
-					for _, room := range rooms {
-						maybeArchiveRoom(work.gid, room.ID, client)
+					rooms, error := GetRooms(work.gid, client)
+					if error != nil {
+						log.Errorf("Failed to retrieve rooms for gid-%d", work.gid)
+					} else {
+						for _, room := range rooms {
+							MaybeArchiveRoom(work.gid, room.ID, group.threshold, client)
+						}
 					}
 				}
 			case <-w.QuitChan:

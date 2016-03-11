@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/rberrelleza/try"
 	"github.com/tbruyelle/hipchat-go/hipchat"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -12,9 +14,6 @@ import (
 const (
 	// See http://golang.org/pkg/time/#Parse
 	timeFormat = "2006-01-02T15:04:05+00:00"
-
-	// room will be archive if idle for more than 90 days
-	maxRoomIdleness = 90
 )
 
 var dryRun, _ = strconv.ParseBool(os.Getenv("DRY_RUN"))
@@ -24,19 +23,27 @@ type Room struct {
 	last_active string
 }
 
-func getRooms(groupId int, client *hipchat.Client) []hipchat.Room {
-	rooms, response, err := client.Room.List()
+func GetRooms(groupId int, client *hipchat.Client) ([]hipchat.Room, error) {
+	var rooms *hipchat.Rooms
+	var response *http.Response
+
+	err := try.DoWithBackoff(func(attempt int) (bool, error) {
+		var err error
+		rooms, response, err = client.Room.List()
+		return attempt < 5, err // try 5 times
+	}, try.ExponentialJitterBackoff)
+
 	if err != nil {
 		log.Errorf("Client.CreateClient returns an error %v", response)
+		return nil, err
 	}
 
-	return rooms.Items
+	return rooms.Items, err
 }
 
-func maybeArchiveRoom(groupId int, roomId int, client *hipchat.Client) {
+func MaybeArchiveRoom(groupId int, roomId int, threshold int, client *hipchat.Client) {
 	daysSinceLastActive := getDaysSinceLastActive(roomId, client)
-
-	remainingIdleDaysAllowed := daysSinceLastActive - maxRoomIdleness
+	remainingIdleDaysAllowed := daysSinceLastActive - threshold
 
 	if remainingIdleDaysAllowed >= 0 {
 		archiveRoom(groupId, roomId, client, daysSinceLastActive)

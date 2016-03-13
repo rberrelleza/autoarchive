@@ -51,14 +51,21 @@ func MaybeArchiveRoom(groupId int, roomId int, threshold int, client *hipchat.Cl
 }
 
 func getDaysSinceLastActive(roomId int, client *hipchat.Client) int {
-	stats, response, err := client.Room.GetStatistics(strconv.Itoa(roomId))
+	var response *http.Response
+	var stats *hipchat.RoomStatistics
+
+	err := try.DoWithBackoff(func(attempt int) (bool, error) {
+		var err error
+		stats, response, err = client.Room.GetStatistics(strconv.Itoa(roomId))
+		return attempt < 5, err // try 5 times
+	}, try.ExponentialJitterBackoff)
 
 	if err != nil {
 		log.Debugf("Client.Room.GetStatistics returns an error %v", response)
 
 	} else {
 		if stats.LastActive == "" {
-			log.Debugf("last_active is empty for rid-%d %s", roomId, stats.LastActive)
+			log.Infof("last_active is empty for rid-%d %s", roomId, stats.LastActive)
 		} else {
 			log.Debugf("rid-%d last_active %v", roomId, stats.LastActive)
 
@@ -80,7 +87,15 @@ func getDaysSinceLastActive(roomId int, client *hipchat.Client) int {
 }
 
 func archiveRoom(groupId int, roomId int, client *hipchat.Client, idleDays int) {
-	room, response, err := client.Room.Get(strconv.Itoa(roomId))
+	var response *http.Response
+	var room *hipchat.Room
+
+	err := try.DoWithBackoff(func(attempt int) (bool, error) {
+		var err error
+		room, response, err = client.Room.Get(strconv.Itoa(roomId))
+		return attempt < 5, err // try 5 times
+	}, try.ExponentialJitterBackoff)
+
 	if err != nil {
 		log.Errorf("Client.Room.Get returned an error %v", response)
 		return
@@ -125,6 +140,7 @@ func notifyArchival(roomId int, message string, client *hipchat.Client) {
 	}
 
 	resp, err := client.Room.Notification(strconv.Itoa(roomId), &notificationRequest)
+
 	if err != nil {
 		log.Errorf("Client.Room.Notification returned an error when archiving %v", resp)
 		contents, err := ioutil.ReadAll(resp.Body)

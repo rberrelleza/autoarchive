@@ -10,7 +10,6 @@ type WorkRequest struct {
 
 // Context keep context of the running application
 type Context struct {
-	baseURL    string
 	pghost     string
 	pguser     string
 	pgpass     string

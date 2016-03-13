@@ -1,0 +1,32 @@
+{
+  "key": "hiparchiver",
+  "name": "Auto Archiver",
+  "description": "Automatically archive your rooms after they have bee idle for a while.",
+  "vendor": {
+      "name": "Ramiro Berrelleza",
+      "url": "http://ramiroberrelleza.com"
+  },
+  "links": {
+      "self": "{{.BaseURL}}/descriptor.json",
+      "homepage": "{{.BaseURL}}/descriptor.json"
+  },
+  "capabilities": {
+    "hipchatApiConsumer": {
+      "avatar": "https://s3.amazonaws.com/uploads.hipchat.com/167300/1202992/Xv8F9Cf7pGRemNI/archiver.png",
+      "scopes": [
+          "view_group",
+          "manage_rooms",
+          "admin_room",
+          "send_notification"
+      ]
+    },
+    "installable": {
+      "allowGlobal": true,
+      "allowRoom": false,
+      "callbackUrl": "{{.BaseURL}}/installable"
+    },
+    "configurable": {
+        "url": "{{.BaseURL}}/configurable"
+    }
+  }
+}

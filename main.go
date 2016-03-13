@@ -16,7 +16,6 @@ var format = logging.MustStringFormatter(
 func main() {
 	var (
 		mode       = flag.String("mode", "all", "mode: all|web|worker|scheduler")
-		baseURL    = flag.String("baseurl", os.Getenv("BASE_URL"), "local base url")
 		schedule   = flag.String("schedule", "24h", "How often to evaluate idleness")
 		loglevel   = flag.String("loglevel", "DEBUG", "Log level")
 		pghost     = flag.String("pghost", "localhost", "PG Host")
@@ -35,7 +34,7 @@ func main() {
 	backendLeveled.SetLevel(parsedLogLevel, "")
 	logging.SetBackend(backendLeveled)
 
-	context := &Context{baseURL: *baseURL, pghost: *pghost, pguser: *pguser, pgpass: *pgpass, pgdatabase: *pgdatabase, nworkers: 4}
+	context := &Context{pghost: *pghost, pguser: *pguser, pgpass: *pgpass, pgdatabase: *pgdatabase, nworkers: 4}
 
 	log.Infof("Starting hiparchiver with role %s", *mode)
 	switch *mode {

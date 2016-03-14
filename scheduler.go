@@ -6,29 +6,38 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/jasonlvhit/gocron"
 	"time"
+	"github.com/RichardKnop/machinery/v1/signatures"
 )
-
-var WorkQueue = make(chan WorkRequest, 100)
 
 func StartScheduler() {
 	b := NewBackendServer("hiparchiver.scheduler")
 
 	b.Log.Infof("Starting the scheduler")
-	schedule := util.Env.GetStringOr("SCHEDULE_ENV", "24h")
-	duration, error := time.ParseDuration(schedule)
-	checkErr(error)
+	scheduleExternal := util.Env.GetInt("SCHEDULE_EXTERNAL")
 
-	go func() {
-		seconds := uint64(duration.Seconds())
-		b.Log.Infof("Scheduler will run every %s", schedule)
-		gocron.Every(seconds).Seconds().Do(b.autoArchive)
-		<-gocron.Start()
-	}()
+	if scheduleExternal == 1 {
+		// this is intended for environments like Heroku, where the scheduler is external
+		b.autoArchive()
+	} else {
+		schedule := util.Env.GetStringOr("SCHEDULE_ENV", "24h")
+		duration, err := time.ParseDuration(schedule)
+		if err != nil {
+			panic(err)
+		}
 
+		go func() {
+			seconds := uint64(duration.Seconds())
+			b.Log.Infof("Scheduler will run every %s", schedule)
+			gocron.Every(seconds).Seconds().Do(b.autoArchive)
+			<-gocron.Start()
+		}()
+	}
 }
 
 func (s *Server) autoArchive() {
 	s.Log.Infof("start autoArchive")
+
+	taskServer := NewTaskServer()
 	conn := s.RedisPool.Get()
 
 	// TODO: Find a better way to pull this info, this won't scale at all
@@ -49,7 +58,20 @@ func (s *Server) autoArchive() {
 	for _, key := range keys {
 		tenantID := key[len("hipchat:tenants:"):]
 		s.Log.Debugf("Start archiving tid-%s", tenantID)
-		work := WorkRequest{tenantID}
-		WorkQueue <- work
+		task := signatures.TaskSignature{
+	  	Name: "autoArchive",
+	  	Args: []signatures.TaskArg{
+	    	signatures.TaskArg{
+	      	Type:  "string",
+	      	Value: tenantID,
+	    },
+	  },
+	}
+
+	_, err := taskServer.SendTask(&task)
+	if err != nil {
+	  s.Log.Errorf("Failed to schedule task for tid-%s: %s", tenantID, err)
+	}
+
 	}
 }

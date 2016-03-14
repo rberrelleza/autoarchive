@@ -3,6 +3,7 @@ package main
 import (
 	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	"bitbucket.org/rbergman/go-hipchat-connect/web"
+	"flag"
 	"github.com/garyburd/redigo/redis"
 	"time"
 )
@@ -21,9 +22,24 @@ func NewBackendServer(appName string) *Server {
 }
 
 func main() {
-	StartScheduler()
-	StartWorkers()
-	startWeb()
+	var role = flag.String("role", "all", "Which role to start: all|web|scheduler|worker")
+	flag.Parse()
+
+	switch *role {
+	case "all":
+		StartScheduler()
+		StartWorker()
+		startWeb()
+
+	case "web":
+		startWeb()
+
+	case "scheduler":
+		StartScheduler()
+
+	case "worker":
+		StartWorker()
+	}
 }
 
 func startWeb() {
@@ -31,12 +47,6 @@ func startWeb() {
 	s.AddGetConfigurable(s.configurable)
 	s.AddPostConfigurable(s.postConfigurable)
 	s.Start()
-}
-
-func checkErr(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
 
 func newRedisPool() *redis.Pool {

@@ -4,117 +4,68 @@ import (
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
-var WorkerQueue chan chan WorkRequest
-
-func StartWorkers() {
+func StartWorker() {
 	b := NewBackendServer("hiparchiver.workers")
-	// First, initialize the channel we are going to but the workers' work channels into.
-	WorkerQueue = make(chan chan WorkRequest, 4)
 
-	// Now, create all of our workers.
-	for i := 0; i < 4; i++ {
-		b.Log.Infof("Starting worker-%d", i+1)
-		worker := b.newWorker(i+1, WorkerQueue)
-		worker.start(b)
+	taskServer := NewTaskServer()
+	taskServer.RegisterTask("autoArchive", b.AutoArchive)
+
+	worker := taskServer.NewWorker("worker1")
+	err := worker.Launch()
+	if err != nil {
+  	panic(err)
 	}
-
-	go func() {
-		for {
-			select {
-			case work := <-WorkQueue:
-				b.Log.Debugf("Received work request")
-				go func() {
-					worker := <-WorkerQueue
-					b.Log.Debugf("Dispatching work request")
-					worker <- work
-				}()
-			}
-		}
-	}()
 }
 
-// NewWorker creates, and returns a new Worker object. Its only argument
-// is a channel that the worker can add itself to whenever it is done its
-// work.
-func (s *Server) newWorker(id int, workerQueue chan chan WorkRequest) Worker {
-	// Create, and return the worker.
-	worker := Worker{
-		ID:          id,
-		Work:        make(chan WorkRequest),
-		WorkerQueue: workerQueue,
-		QuitChan:    make(chan bool),
+// Machinery requires to return a (interface{}, error) even if we don't handle
+// the result, so faking it for now (shrug)
+func (s *Server) AutoArchive(tenantID string) (bool, error) {
+	w := Worker{
 		Log:         s.Log,
 	}
 
-	return worker
-}
+	tenants := s.NewTenants()
+	tenant, err := tenants.Get(tenantID)
+	if err != nil {
+		s.Log.Errorf("Coudn't find tid-%s", tenantID)
+		return true, err
+	}
 
-// This function "starts" the worker by starting a goroutine, that is
-// an infinite "for-select" loop.
-func (w Worker) start(s *Server) {
-	go func() {
-		for {
-			// Add ourselves into the worker queue.
-			w.WorkerQueue <- w.Work
+	tenantConfigurations := s.NewTenantConfigurations()
+	tenantConfiguration, err := tenantConfigurations.Get(tenantID)
 
-			select {
-			case work := <-w.Work:
-				// Receive a work request.
-				w.Log.Debugf("worker%d: Received work request for tid-%s", w.ID, work.TenantID)
+	if err != nil {
+		s.Log.Errorf("Coudn't find a configuration for tid-%s", tenantID)
+		return true, err
+	}
 
-				tenants := s.NewTenants()
-				tenant, err := tenants.Get(work.TenantID)
-				if err != nil {
-					w.Log.Errorf("Coudn't find tid-%s", work.TenantID)
-					return
-				}
+	credentials := hipchat.ClientCredentials{
+		ClientID:     tenant.ID,
+		ClientSecret: tenant.Secret,
+	}
 
-				tenantConfigurations := s.NewTenantConfigurations()
-				tenantConfiguration, err := tenantConfigurations.Get(tenant.ID)
+	newClient := hipchat.NewClient("")
+	token, _, err := newClient.GenerateToken(
+		credentials,
+		[]string{hipchat.ScopeManageRooms, hipchat.ScopeViewGroup, hipchat.ScopeSendNotification, hipchat.ScopeAdminRoom})
 
-				if err != nil {
-					w.Log.Errorf("Coudn't find a configuration for tid-%s", work.TenantID)
-					return
-				}
+	if err != nil {
+		// this typically means the group uninstalled the plugin
+		s.Log.Errorf("Client.GetAccessToken returned an error %v", err)
+		return true, err
+	}
 
-				credentials := hipchat.ClientCredentials{
-					ClientID:     tenant.ID,
-					ClientSecret: tenant.Secret,
-				}
+	client := token.CreateClient()
+	rooms, error := w.GetRooms(client)
+	if error != nil {
+		s.Log.Errorf("Failed to retrieve rooms for tid-%d", tenantID)
+		return true, error
+	}
 
-				newClient := hipchat.NewClient("")
-				token, _, err := newClient.GenerateToken(
-					credentials,
-					[]string{hipchat.ScopeManageRooms, hipchat.ScopeViewGroup, hipchat.ScopeSendNotification, hipchat.ScopeAdminRoom})
+	for _, room := range rooms {
+		w.MaybeArchiveRoom(tenantID, room.ID, tenantConfiguration.Threshold, client)
+	}
 
-				if err != nil {
-					// this typically means the group uninstalled the plugin
-					w.Log.Errorf("Client.GetAccessToken returns an error %v", err)
-				} else {
-					client := token.CreateClient()
-					rooms, error := w.GetRooms(client)
-					if error != nil {
-						w.Log.Errorf("Failed to retrieve rooms for tid-%d", work.TenantID)
-					} else {
-						for _, room := range rooms {
-							w.MaybeArchiveRoom(work.TenantID, room.ID, tenantConfiguration.Threshold, client)
-						}
-					}
-				}
-			case <-w.QuitChan:
-				// We have been asked to stop.
-				w.Log.Debugf("worker%d stopping\n", w.ID)
-				return
-			}
-		}
-	}()
-}
-
-// Stop tells the worker to stop listening for work requests.
-//
-// Note that the worker will only stop *after* it has finished its work.
-func (w Worker) stop() {
-	go func() {
-		w.QuitChan <- true
-	}()
+	s.Log.Infof("Finished processing rooms for tid-%s", tenantID)
+	return true, nil
 }

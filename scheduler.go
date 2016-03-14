@@ -17,7 +17,7 @@ func StartScheduler() {
 
 	if scheduleExternal == 1 {
 		// this is intended for environments like Heroku, where the scheduler is external
-		b.autoArchive()
+		b.scheduleTasks()
 	} else {
 		schedule := util.Env.GetStringOr("SCHEDULE_ENV", "24h")
 		duration, err := time.ParseDuration(schedule)
@@ -28,13 +28,13 @@ func StartScheduler() {
 		go func() {
 			seconds := uint64(duration.Seconds())
 			b.Log.Infof("Scheduler will run every %s", schedule)
-			gocron.Every(seconds).Seconds().Do(b.autoArchive)
+			gocron.Every(seconds).Seconds().Do(b.scheduleTasks)
 			<-gocron.Start()
 		}()
 	}
 }
 
-func (s *Server) autoArchive() {
+func (s *Server) scheduleTasks() {
 	s.Log.Infof("start autoArchive")
 
 	taskServer := NewTaskServer()

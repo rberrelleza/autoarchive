@@ -22,7 +22,7 @@ func NewBackendServer(appName string) *Server {
 }
 
 func main() {
-	var role = flag.String("role", "all", "Which role to start: all|web|scheduler|worker")
+	var role = flag.String("role", "web", "Which role to start: web|scheduler|worker")
 	flag.Parse()
 
 	switch *role {

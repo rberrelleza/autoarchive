@@ -1,1 +1,1 @@
-web: autoarchive
+web: ./autoarchive

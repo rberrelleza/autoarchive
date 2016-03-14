@@ -30,6 +30,39 @@
 			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
 		},
 		{
+			"ImportPath": "github.com/RichardKnop/machinery/v1",
+			"Rev": "cdcae975556baefbb0fe9182b6ebc3b6970cb63e"
+		},
+		{
+			"ImportPath": "github.com/RichardKnop/machinery/v1/backends",
+			"Rev": "cdcae975556baefbb0fe9182b6ebc3b6970cb63e"
+		},
+		{
+			"ImportPath": "github.com/RichardKnop/machinery/v1/brokers",
+			"Rev": "cdcae975556baefbb0fe9182b6ebc3b6970cb63e"
+		},
+		{
+			"ImportPath": "github.com/RichardKnop/machinery/v1/config",
+			"Rev": "cdcae975556baefbb0fe9182b6ebc3b6970cb63e"
+		},
+		{
+			"ImportPath": "github.com/RichardKnop/machinery/v1/signatures",
+			"Rev": "cdcae975556baefbb0fe9182b6ebc3b6970cb63e"
+		},
+		{
+			"ImportPath": "github.com/RichardKnop/machinery/v1/utils",
+			"Rev": "cdcae975556baefbb0fe9182b6ebc3b6970cb63e"
+		},
+		{
+			"ImportPath": "github.com/RichardKnop/uuid",
+			"Rev": "dee7705ef7b324f27ceb85a121c61f2c2e8ce988"
+		},
+		{
+			"ImportPath": "github.com/bradfitz/gomemcache/memcache",
+			"Comment": "release.r60-41-gfb1f79c",
+			"Rev": "fb1f79c6b65acda83063cbc69f6bba1522558bfc"
+		},
+		{
 			"ImportPath": "github.com/chakrit/go-bunyan",
 			"Rev": "5a9b5e7b1765a2d8c872c8faa32f0a812337a61e"
 		},
@@ -86,9 +119,17 @@
 			"Rev": "62dd9cd7d68b4cf705bf842b0a01596a29c531f4"
 		},
 		{
+			"ImportPath": "github.com/streadway/amqp",
+			"Rev": "2e25825abdbd7752ff08b270d313b93519a0a232"
+		},
+		{
 			"ImportPath": "github.com/tbruyelle/hipchat-go/hipchat",
 			"Comment": "v1.1-26-g8b2e6b6",
 			"Rev": "8b2e6b6e05bccbb3d6487dae9162b91a4be03b22"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "a83829b6f1293c91addabc89d0571c246397bbf4"
 		}
 	]
 }

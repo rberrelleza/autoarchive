@@ -1,1 +1,1 @@
-web: hiparchiver
+web: autoarchive

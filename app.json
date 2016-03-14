@@ -5,7 +5,7 @@
     "go",
     "hipchat"
   ],
-  "addons": [ "heroku-redis" ]
+  "addons": [ "heroku-redis" ],
   "image": "heroku/go:1.5",
   "mount_dir": "src/github.com/rberrelleza/autoarchive",
   "website": "https://github.com/rberrelleza/autoarchive",

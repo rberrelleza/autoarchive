@@ -41,7 +41,7 @@ func StartWorker() {
 	}
 }
 
-func (server *Server) startInternalWorkers(numWorkers int, wg *sync.WaitGroup) []Worker {
+func (server *Server) startInternalWorkers(numWorkers int, wg *sync.WaitGroup) *[]Worker {
 	internalWorkers := make([]Worker, numWorkers)
 
 	for i, _ := range internalWorkers {
@@ -50,10 +50,10 @@ func (server *Server) startInternalWorkers(numWorkers int, wg *sync.WaitGroup) [
 		internalWorkers[i].start(server, wg)
 	}
 
-	return internalWorkers
+	return &internalWorkers
 }
 
-func (server *Server) handleExitSignal(internalWorkers []Worker, worker *machinery.Worker, wg *sync.WaitGroup) {
+func (server *Server) handleExitSignal(internalWorkers *[]Worker, worker *machinery.Worker, wg *sync.WaitGroup) {
 	sChan := make(chan os.Signal, 1)
 	signal.Notify(sChan,
 		syscall.SIGHUP,
@@ -66,7 +66,7 @@ func (server *Server) handleExitSignal(internalWorkers []Worker, worker *machine
 		s := <-sChan
 		server.Log.Infof("Signal %s received, stopping workers", s)
 
-		for _, iw := range internalWorkers {
+		for _, iw := range *internalWorkers {
 			iw.stop()
 		}
 

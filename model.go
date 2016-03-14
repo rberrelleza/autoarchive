@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bitbucket.org/rbergman/go-hipchat-connect/web"
+	"github.com/chakrit/go-bunyan"
 	"github.com/dgrijalva/jwt-go"
 )
 
-type WorkRequest struct {
-	gid int
+type Server struct {
+	web.Server
 }
 
 // Context keep context of the running application
@@ -30,4 +32,9 @@ type Worker struct {
 	Work        chan WorkRequest
 	WorkerQueue chan chan WorkRequest
 	QuitChan    chan bool
+	Log         bunyan.Log
+}
+
+type WorkRequest struct {
+	TenantID string
 }

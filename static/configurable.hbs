@@ -1,4 +1,3 @@
-{{define "config"}}
 <html>
   <head>
     <script src="https://www.hipchat.com/atlassian-connect/all.js"></script>
@@ -16,10 +15,11 @@
                 <form  class="aui" id="form" method="POST">
                   <label for="threshold">Automatically archive your rooms after they haven't been used for:</label>
                   <select class="select medium-field" id="threshold" name="threshold">
-                     <option value="15" {{if eq "15" .Threshold}}selected{{end}}>15 days</option>
-                     <option value="30" {{if eq "30" .Threshold}}selected{{end}}>30 days</option>
-                     <option value="45" {{if eq "45" .Threshold}}selected{{end}}>45 days</option>
-                     <option value="90" {{if eq "90" .Threshold}}selected{{end}}>90 days</option>
+                    <option value="7" {{if eq  "7" .Threshold}}selected{{end}}>7 days</option>
+                    <option value="15" {{if eq "15" .Threshold}}selected{{end}}>15 days</option>
+                    <option value="30" {{if eq "30" .Threshold}}selected{{end}}>30 days</option>
+                    <option value="45" {{if eq "45" .Threshold}}selected{{end}}>45 days</option>
+                    <option value="90" {{if eq "90" .Threshold}}selected{{end}}>90 days</option>
                   </select>
                   <button id="save" class="aui-button aui-button-primary">Save</button>
                 </form>
@@ -49,4 +49,3 @@
     </div>
   </body>
 </html>
-{{end}}

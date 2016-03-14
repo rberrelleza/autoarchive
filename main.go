@@ -1,58 +1,56 @@
 package main
 
 import (
-	"flag"
-	"os"
-
-	_ "github.com/lib/pq"
-	"github.com/op/go-logging"
+	"bitbucket.org/rbergman/go-hipchat-connect/util"
+	"bitbucket.org/rbergman/go-hipchat-connect/web"
+	"github.com/garyburd/redigo/redis"
+	"time"
 )
 
-var log = logging.MustGetLogger("main.go")
-var format = logging.MustStringFormatter(
-	`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
-)
+func NewBackendServer(appName string) *Server {
+	log := web.NewStdLogger(appName)
+
+	ws := &web.Server{
+		AppName:   appName,
+		Log:       log,
+		RedisPool: newRedisPool(),
+	}
+
+	s := &Server{*ws}
+	return s
+}
 
 func main() {
-	var (
-		mode       = flag.String("mode", "all", "mode: all|web|worker|scheduler")
-		schedule   = flag.String("schedule", "24h", "How often to evaluate idleness")
-		loglevel   = flag.String("loglevel", "DEBUG", "Log level")
-		pghost     = flag.String("pghost", "localhost", "PG Host")
-		pgdatabase = flag.String("pgdatabase", "hiparchiver", "PG Database")
-		pguser     = flag.String("pguser", "postgres", "PG User")
-		pgpass     = flag.String("pgpass", "postgres", "PG Password")
-	)
+	StartScheduler()
+	StartWorkers()
+	startWeb()
+}
 
-	flag.Parse()
-
-	backend := logging.NewLogBackend(os.Stdout, "", 0)
-	backendFormatter := logging.NewBackendFormatter(backend, format)
-	backendLeveled := logging.AddModuleLevel(backendFormatter)
-	parsedLogLevel, error := logging.LogLevel(*loglevel)
-	checkErr(error)
-	backendLeveled.SetLevel(parsedLogLevel, "")
-	logging.SetBackend(backendLeveled)
-
-	context := &Context{pghost: *pghost, pguser: *pguser, pgpass: *pgpass, pgdatabase: *pgdatabase, nworkers: 4}
-
-	log.Infof("Starting hiparchiver with role %s", *mode)
-	switch *mode {
-	case "all":
-		context.RunDispatcher()
-		context.RunScheduler(schedule)
-		context.RunWeb()
-	case "web":
-		context.RunWeb()
-	case "worker":
-		context.RunDispatcher()
-	case "scheduler":
-		context.RunScheduler(schedule)
-	}
+func startWeb() {
+	s := &Server{*web.NewServer("./static/descriptor.json")}
+	s.AddGetConfigurable(s.configurable)
+	s.AddPostConfigurable(s.postConfigurable)
+	s.Start()
 }
 
 func checkErr(err error) {
 	if err != nil {
 		panic(err)
+	}
+}
+
+func newRedisPool() *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     3,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			var redisEnv = util.Env.GetStringOr("REDIS_ENV", "REDIS_URL")
+			var redisURL = util.Env.GetStringOr(redisEnv, "redis://127.0.0.1:6379")
+			return redis.DialURL(redisURL)
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
 	}
 }

@@ -2,8 +2,9 @@ package main
 
 import (
 	"bytes"
-  "io"
-  "encoding/json"
+	"encoding/json"
+	_ "github.com/garyburd/redigo/redis"
+	"io"
 )
 
 // Tenants manages a collection of known integration tenants
@@ -17,18 +18,24 @@ type TenantConfiguration struct {
 }
 
 func (s *Server) NewTenantConfigurations() *TenantConfigurations {
-  return &TenantConfigurations{server: s}
+	return &TenantConfigurations{server: s}
 }
 
 // Get returns a TenantConfiguration by id string
 func (t *TenantConfigurations) Get(id string) (*TenantConfiguration, error) {
-  store := t.server.NewTenantStore(id)
-  value, err := store.Get(id)
+	store := t.server.NewTenantStore(id)
+	value, err := store.Get(id)
+
 	if err != nil {
+		t.server.Log.Debugf("Error when getting configuration for tid-%s: %s", id, err)
 		return &TenantConfiguration{ID: id}, err
+	} else if len(value) == 0 {
+		t.server.Log.Debugf("Didn't find getting configuration for tid-%s, returning default", id)
+		return &TenantConfiguration{ID: id, Threshold: 90}, nil
+	} else {
+		r := bytes.NewReader([]byte(value))
+		return decode(r)
 	}
-	r := bytes.NewReader([]byte(value))
-	return decode(r)
 }
 
 // Set adds a TenantConfiguration by id
@@ -38,13 +45,14 @@ func (t *TenantConfigurations) Set(configuration *TenantConfiguration) error {
 	if err != nil {
 		return err
 	}
-  store := t.server.NewTenantStore(configuration.ID)
-	return store.Set(configuration.ID, w.Bytes())
+
+	ts := t.server.NewTenantStore(configuration.ID)
+	return ts.Set(configuration.ID, w.Bytes())
 }
 
 // Del removes a Tenant by id string
 func (t *TenantConfigurations) Del(id string) error {
-  store := t.server.NewTenantStore(id)
+	store := t.server.NewTenantStore(id)
 	return store.Del(id)
 }
 

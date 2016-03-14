@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	"fmt"
 	"github.com/rberrelleza/try"
 	"github.com/tbruyelle/hipchat-go/hipchat"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 )
@@ -16,14 +16,12 @@ const (
 	timeFormat = "2006-01-02T15:04:05+00:00"
 )
 
-var dryRun, _ = strconv.ParseBool(os.Getenv("DRY_RUN"))
-
 type Room struct {
 	roomId      int
 	last_active string
 }
 
-func GetRooms(groupId int, client *hipchat.Client) ([]hipchat.Room, error) {
+func (w *Worker) GetRooms(client *hipchat.Client) ([]hipchat.Room, error) {
 	var rooms *hipchat.Rooms
 	var response *http.Response
 
@@ -34,23 +32,23 @@ func GetRooms(groupId int, client *hipchat.Client) ([]hipchat.Room, error) {
 	}, try.ExponentialJitterBackoff)
 
 	if err != nil {
-		log.Errorf("Client.CreateClient returns an error %v", response)
+		w.Log.Errorf("Client.CreateClient returns an error %v", response)
 		return nil, err
 	}
 
 	return rooms.Items, err
 }
 
-func MaybeArchiveRoom(groupId int, roomId int, threshold int, client *hipchat.Client) {
-	daysSinceLastActive := getDaysSinceLastActive(roomId, client)
+func (w *Worker) MaybeArchiveRoom(tenantID string, roomId int, threshold int, client *hipchat.Client) {
+	daysSinceLastActive := w.getDaysSinceLastActive(roomId, client)
 	remainingIdleDaysAllowed := daysSinceLastActive - threshold
 
 	if remainingIdleDaysAllowed >= 0 {
-		archiveRoom(groupId, roomId, client, daysSinceLastActive)
+		w.archiveRoom(tenantID, roomId, client, daysSinceLastActive)
 	}
 }
 
-func getDaysSinceLastActive(roomId int, client *hipchat.Client) int {
+func (w *Worker) getDaysSinceLastActive(roomId int, client *hipchat.Client) int {
 	var response *http.Response
 	var stats *hipchat.RoomStatistics
 
@@ -61,21 +59,21 @@ func getDaysSinceLastActive(roomId int, client *hipchat.Client) int {
 	}, try.ExponentialJitterBackoff)
 
 	if err != nil {
-		log.Debugf("Client.Room.GetStatistics returns an error %v", response)
+		w.Log.Debugf("Client.Room.GetStatistics returns an error %v", response)
 
 	} else {
 		if stats.LastActive == "" {
-			log.Infof("last_active is empty for rid-%d %s", roomId, stats.LastActive)
+			w.Log.Infof("last_active is empty for rid-%d %s", roomId, stats.LastActive)
 		} else {
-			log.Debugf("rid-%d last_active %v", roomId, stats.LastActive)
+			w.Log.Debugf("rid-%d last_active %v", roomId, stats.LastActive)
 
 			lastActive, err := time.Parse(timeFormat, stats.LastActive)
 			if err != nil {
-				log.Debugf("Couldn't parse rid-%d date error: %v", roomId, err)
+				w.Log.Debugf("Couldn't parse rid-%d date error: %v", roomId, err)
 			} else {
 				delta := time.Now().Sub(lastActive)
 				deltaInDays := int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware
-				log.Debugf("rid-%d has been idle for %d days", roomId, deltaInDays)
+				w.Log.Debugf("rid-%d has been idle for %d days", roomId, deltaInDays)
 				return deltaInDays
 			}
 		}
@@ -86,7 +84,7 @@ func getDaysSinceLastActive(roomId int, client *hipchat.Client) int {
 	return 0
 }
 
-func archiveRoom(groupId int, roomId int, client *hipchat.Client, idleDays int) {
+func (w *Worker) archiveRoom(tenantID string, roomId int, client *hipchat.Client, idleDays int) {
 	var response *http.Response
 	var room *hipchat.Room
 
@@ -97,7 +95,7 @@ func archiveRoom(groupId int, roomId int, client *hipchat.Client, idleDays int) 
 	}, try.ExponentialJitterBackoff)
 
 	if err != nil {
-		log.Errorf("Client.Room.Get returned an error %v", response)
+		w.Log.Errorf("Client.Room.Get returned an error %v", response)
 		return
 	}
 
@@ -114,25 +112,25 @@ func archiveRoom(groupId int, roomId int, client *hipchat.Client, idleDays int) 
 
 	message := fmt.Sprintf("@%s This room was archived since it has been inactive for %d days. Go to https://hipchat.com/rooms/archive/%d to unarchive it.", room.Owner.MentionName, idleDays, roomId)
 
-	if dryRun {
-		log.Infof("Would've archived gid-%d rid-%d: %s", groupId, roomId, message)
+	dryRun := util.Env.GetInt("DRYRUN_ENV")
+	if dryRun == 1 {
+		w.Log.Infof("Would've archived tid-%s rid-%d: %s", tenantID, roomId, message)
 	} else {
-
-		notifyArchival(roomId, message, client)
+		w.notifyArchival(roomId, message, client)
 
 		resp, err := client.Room.Update(strconv.Itoa(roomId), &updateRequest)
 
 		if err != nil {
-			log.Errorf("Client.Room.Update returned an error when archiving")
+			w.Log.Errorf("Client.Room.Update returned an error when archiving")
 			contents, err := ioutil.ReadAll(resp.Body)
-			log.Errorf("%s %s", contents, err)
+			w.Log.Errorf("%s %s", contents, err)
 		} else {
-			log.Infof("Archived gid-%d rid-%d", groupId, roomId)
+			w.Log.Infof("Archived tid-%d rid-%d", tenantID, roomId)
 		}
 	}
 }
 
-func notifyArchival(roomId int, message string, client *hipchat.Client) {
+func (w *Worker) notifyArchival(roomId int, message string, client *hipchat.Client) {
 	notificationRequest := hipchat.NotificationRequest{
 		Message:       message,
 		Notify:        true,
@@ -142,8 +140,8 @@ func notifyArchival(roomId int, message string, client *hipchat.Client) {
 	resp, err := client.Room.Notification(strconv.Itoa(roomId), &notificationRequest)
 
 	if err != nil {
-		log.Errorf("Client.Room.Notification returned an error when archiving %v", resp)
+		w.Log.Errorf("Client.Room.Notification returned an error when archiving %v", resp)
 		contents, err := ioutil.ReadAll(resp.Body)
-		log.Errorf("%s %s", contents, err)
+		w.Log.Errorf("%s %s", contents, err)
 	}
 }

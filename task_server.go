@@ -1,14 +1,14 @@
 package main
 
 import (
+	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	machinery "github.com/RichardKnop/machinery/v1"
 	"github.com/RichardKnop/machinery/v1/config"
-  "bitbucket.org/rbergman/go-hipchat-connect/util"
 )
 
 func NewTaskServer() *machinery.Server {
-  var redisEnv = util.Env.GetStringOr("REDIS_ENV", "REDIS_URL")
-  var redisURL = util.Env.GetStringOr(redisEnv, "redis://127.0.0.1:6379")
+	var redisEnv = util.Env.GetStringOr("REDIS_ENV", "REDIS_URL")
+	var redisURL = util.Env.GetStringOr(redisEnv, "redis://127.0.0.1:6379")
 
 	var cnf = config.Config{
 		Broker:        redisURL,

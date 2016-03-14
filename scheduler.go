@@ -3,10 +3,10 @@ package main
 import (
 	"bitbucket.org/rbergman/go-hipchat-connect/store"
 	"bitbucket.org/rbergman/go-hipchat-connect/util"
+	"github.com/RichardKnop/machinery/v1/signatures"
 	"github.com/garyburd/redigo/redis"
 	"github.com/jasonlvhit/gocron"
 	"time"
-	"github.com/RichardKnop/machinery/v1/signatures"
 )
 
 func StartScheduler() {
@@ -59,19 +59,19 @@ func (s *Server) scheduleTasks() {
 		tenantID := key[len("hipchat:tenants:"):]
 		s.Log.Debugf("Start archiving tid-%s", tenantID)
 		task := signatures.TaskSignature{
-	  	Name: "autoArchive",
-	  	Args: []signatures.TaskArg{
-	    	signatures.TaskArg{
-	      	Type:  "string",
-	      	Value: tenantID,
-	    },
-	  },
-	}
+			Name: "autoArchive",
+			Args: []signatures.TaskArg{
+				signatures.TaskArg{
+					Type:  "string",
+					Value: tenantID,
+				},
+			},
+		}
 
-	_, err := taskServer.SendTask(&task)
-	if err != nil {
-	  s.Log.Errorf("Failed to schedule task for tid-%s: %s", tenantID, err)
-	}
+		_, err := taskServer.SendTask(&task)
+		if err != nil {
+			s.Log.Errorf("Failed to schedule task for tid-%s: %s", tenantID, err)
+		}
 
 	}
 }

@@ -1,0 +1,12 @@
+{
+  "name": "hc-autoarchiver",
+  "description": "HipChat Auto Archiver Addon",
+  "keywords": [
+    "go",
+    "hipchat"
+  ],
+  "image": "heroku/go:1.5",
+  "mount_dir": "src/github.com/rberrelleza/autoarchive",
+  "website": "https://github.com/rberrelleza/autoarchive",
+  "repository": "https://github.com/rberrelleza/autoarchive"
+}

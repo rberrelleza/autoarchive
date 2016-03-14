@@ -1,0 +1,91 @@
+{
+	"ImportPath": "github.com/rberrelleza/hiparchiver",
+	"GoVersion": "go1.5",
+	"Deps": [
+		{
+			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/model",
+			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+		},
+		{
+			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/rest",
+			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+		},
+		{
+			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/store",
+			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+		},
+		{
+			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/tenant",
+			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+		},
+		{
+			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/util",
+			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+		},
+		{
+			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/web",
+			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+		},
+		{
+			"ImportPath": "github.com/chakrit/go-bunyan",
+			"Rev": "5a9b5e7b1765a2d8c872c8faa32f0a812337a61e"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/negroni",
+			"Comment": "v0.1-70-gc7477ad",
+			"Rev": "c7477ad8e330bef55bf1ebe300cf8aa67c492d1b"
+		},
+		{
+			"ImportPath": "github.com/dgrijalva/jwt-go",
+			"Comment": "v2.4.0-12-g9a4b9f2",
+			"Rev": "9a4b9f2ac1f7685147a5c01544e3b922dbc1f4a0"
+		},
+		{
+			"ImportPath": "github.com/garyburd/redigo/internal",
+			"Rev": "55d64223b60ff7c6a7f1c391f611038a88a86b01"
+		},
+		{
+			"ImportPath": "github.com/garyburd/redigo/redis",
+			"Rev": "55d64223b60ff7c6a7f1c391f611038a88a86b01"
+		},
+		{
+			"ImportPath": "github.com/go-zoo/bone",
+			"Comment": "v1.1-20-g629d9db",
+			"Rev": "629d9db86036f5c7c7468425ec42c4f41d80bbcb"
+		},
+		{
+			"ImportPath": "github.com/google/go-querystring/query",
+			"Rev": "6bb77fe6f42b85397288d4f6f67ac72f8f400ee7"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
+		},
+		{
+			"ImportPath": "github.com/jasonlvhit/gocron",
+			"Rev": "0b564bf03e9665599efbcba1c6fba3d84212c197"
+		},
+		{
+			"ImportPath": "github.com/lonnblad/negroni-etag/etag",
+			"Rev": "83de34f124a6e9370753e128e4bc5a111326bd29"
+		},
+		{
+			"ImportPath": "github.com/patrickmn/go-cache",
+			"Rev": "1881a9bccb818787f68c52bfba648c6cf34c34fa"
+		},
+		{
+			"ImportPath": "github.com/pilu/xrequestid",
+			"Rev": "870344eeaa6c844027ac57cba3c926e0684e05cb"
+		},
+		{
+			"ImportPath": "github.com/rberrelleza/try",
+			"Comment": "v1-2-g62dd9cd",
+			"Rev": "62dd9cd7d68b4cf705bf842b0a01596a29c531f4"
+		},
+		{
+			"ImportPath": "github.com/tbruyelle/hipchat-go/hipchat",
+			"Comment": "v1.1-26-g8b2e6b6",
+			"Rev": "8b2e6b6e05bccbb3d6487dae9162b91a4be03b22"
+		}
+	]
+}

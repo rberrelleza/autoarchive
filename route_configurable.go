@@ -1,20 +1,21 @@
 package main
 
 import (
-	"bitbucket.org/rbergman/go-hipchat-connect/web"
 	"fmt"
 	"html/template"
 	"net/http"
 	"path"
 	"strconv"
+
+	"bitbucket.org/rbergman/go-hipchat-connect/web"
 )
 
 func (s *Server) configurable(w http.ResponseWriter, r *http.Request) {
 
-	tenant := web.GetTenant(r)
+	tenant, error := web.GetTenant(r)
 	s.Log.Debugf("tenant: %v", tenant)
 
-	if tenant.ID == "" {
+	if error != nil {
 		err := fmt.Errorf("Internal Server Error: tenant wasn't in the context")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -33,7 +34,13 @@ func (s *Server) configurable(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) postConfigurable(w http.ResponseWriter, r *http.Request) {
-	tenant := web.GetTenant(r)
+	tenant, error := web.GetTenant(r)
+	if error != nil {
+		err := fmt.Errorf("Internal Server Error: tenant wasn't in the context")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	strThreshold := r.FormValue("threshold")
 
 	if strThreshold == "" {

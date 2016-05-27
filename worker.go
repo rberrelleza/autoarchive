@@ -146,8 +146,8 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup) {
 					continue
 				}
 
-				token.BaseURL = baseURL
 				client := token.CreateClient()
+				client.BaseURL = baseURL
 				rooms, error := w.GetRooms(client)
 				if error != nil {
 					w.Log.Errorf("Failed to retrieve rooms for tid-%s", work.TenantID)

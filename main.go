@@ -1,11 +1,12 @@
 package main
 
 import (
+	"flag"
+	"time"
+
 	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	"bitbucket.org/rbergman/go-hipchat-connect/web"
-	"flag"
 	"github.com/garyburd/redigo/redis"
-	"time"
 )
 
 func NewBackendServer(appName string) *Server {
@@ -43,9 +44,8 @@ func main() {
 }
 
 func startWeb() {
-	s := &Server{*web.NewServer("./static/descriptor.json")}
-	s.AddGetConfigurable(s.configurable)
-	s.AddPostConfigurable(s.postConfigurable)
+	s := &Server{*web.NewServer("./static/descriptor.json", "")}
+	s.MountConfigurable(s.configurable, s.postConfigurable)
 	s.Start()
 }
 

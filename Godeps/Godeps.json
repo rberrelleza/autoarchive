@@ -1,33 +1,31 @@
 {
 	"ImportPath": "github.com/rberrelleza/autoarchive",
-	"GoVersion": "go1.5",
-	"Packages": [
-		"./..."
-	],
+	"GoVersion": "go1.6",
+	"GodepVersion": "v71",
 	"Deps": [
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/model",
-			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+			"Rev": "b80390283a1e7dabe8d92e911e51d12ba4946cd7"
 		},
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/rest",
-			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+			"Rev": "b80390283a1e7dabe8d92e911e51d12ba4946cd7"
 		},
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/store",
-			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+			"Rev": "b80390283a1e7dabe8d92e911e51d12ba4946cd7"
 		},
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/tenant",
-			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+			"Rev": "b80390283a1e7dabe8d92e911e51d12ba4946cd7"
 		},
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/util",
-			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+			"Rev": "b80390283a1e7dabe8d92e911e51d12ba4946cd7"
 		},
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/web",
-			"Rev": "2ce782308d7950e862590d6d918195891ed9f42f"
+			"Rev": "b80390283a1e7dabe8d92e911e51d12ba4946cd7"
 		},
 		{
 			"ImportPath": "github.com/RichardKnop/machinery/v1",
@@ -115,8 +113,8 @@
 		},
 		{
 			"ImportPath": "github.com/rberrelleza/try",
-			"Comment": "v1-2-g62dd9cd",
-			"Rev": "62dd9cd7d68b4cf705bf842b0a01596a29c531f4"
+			"Comment": "v1-2-g07b43a6",
+			"Rev": "07b43a6bfb9cfb28601cee40b41e676f6e6961e3"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",
@@ -124,8 +122,8 @@
 		},
 		{
 			"ImportPath": "github.com/tbruyelle/hipchat-go/hipchat",
-			"Comment": "v1.1-26-g8b2e6b6",
-			"Rev": "8b2e6b6e05bccbb3d6487dae9162b91a4be03b22"
+			"Comment": "v1.1-30-gbc90234",
+			"Rev": "bc9023448a8bce4ad266fbfced5556aacbe6ae04"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",

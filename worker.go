@@ -1,14 +1,16 @@
 package main
 
 import (
-	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	"fmt"
-	machinery "github.com/RichardKnop/machinery/v1"
-	"github.com/tbruyelle/hipchat-go/hipchat"
+	"net/url"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"bitbucket.org/rbergman/go-hipchat-connect/util"
+	machinery "github.com/RichardKnop/machinery/v1"
+	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
 var WorkerQueue chan chan WorkRequest
@@ -44,7 +46,7 @@ func StartWorker() {
 func (server *Server) startInternalWorkers(numWorkers int, wg *sync.WaitGroup) *[]Worker {
 	internalWorkers := make([]Worker, numWorkers)
 
-	for i, _ := range internalWorkers {
+	for i := range internalWorkers {
 		server.Log.Infof("Starting worker-%d", i+1)
 		internalWorkers[i] = server.newWorker(i+1, WorkerQueue)
 		internalWorkers[i].start(server, wg)
@@ -80,14 +82,14 @@ func (server *Server) handleExitSignal(internalWorkers *[]Worker, worker *machin
 // NewWorker creates, and returns a new Worker object. Its only argument
 // is a channel that the worker can add itself to whenever it is done its
 // work.
-func (s *Server) newWorker(id int, workerQueue chan chan WorkRequest) Worker {
+func (server *Server) newWorker(id int, workerQueue chan chan WorkRequest) Worker {
 	// Create, and return the worker.
 	worker := Worker{
 		ID:          id,
 		Work:        make(chan WorkRequest),
 		WorkerQueue: workerQueue,
 		QuitChan:    make(chan bool),
-		Log:         s.Log,
+		Log:         server.Log,
 	}
 
 	return worker
@@ -131,6 +133,9 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup) {
 				}
 
 				newClient := hipchat.NewClient("")
+				baseURL, _ := url.Parse(tenant.Links.API + "/")
+				newClient.BaseURL = baseURL
+				w.Log.Infof("NewClient.BaseURL %s", newClient.BaseURL)
 				token, _, err := newClient.GenerateToken(
 					credentials,
 					[]string{hipchat.ScopeManageRooms, hipchat.ScopeViewGroup, hipchat.ScopeSendNotification, hipchat.ScopeAdminRoom})
@@ -141,12 +146,15 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup) {
 					continue
 				}
 
+				token.BaseURL = baseURL
 				client := token.CreateClient()
 				rooms, error := w.GetRooms(client)
 				if error != nil {
 					w.Log.Errorf("Failed to retrieve rooms for tid-%s", work.TenantID)
 					continue
 				}
+
+				w.Log.Infof("Retrieved %d rooms", len(rooms))
 
 				for _, room := range rooms {
 					w.MaybeArchiveRoom(work.TenantID, room.ID, tenantConfiguration.Threshold, client)
@@ -173,7 +181,7 @@ func (w Worker) stop() {
 
 // Machinery requires to return a (interface{}, error) even if we don't handle
 // the result, so faking it for now (shrug)
-func (s *Server) autoArchive(tenantID string) (bool, error) {
+func (server *Server) autoArchive(tenantID string) (bool, error) {
 	// this sends the autoArchive requests to one of the internal workers to process
 	work := WorkRequest{tenantID}
 	worker := <-WorkerQueue

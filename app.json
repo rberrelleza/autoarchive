@@ -6,7 +6,7 @@
     "hipchat"
   ],
   "addons": [ "heroku-redis" ],
-  "image": "heroku/go:1.5",
+  "image": "heroku/go:1.6",
   "mount_dir": "src/github.com/rberrelleza/autoarchive",
   "website": "https://github.com/rberrelleza/autoarchive",
   "repository": "https://github.com/rberrelleza/autoarchive"

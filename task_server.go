@@ -7,7 +7,7 @@ import (
 )
 
 func NewTaskServer() *machinery.Server {
-	var redisEnv = util.Env.GetStringOr("REDIS_ENV", "REDIS_URL")
+	var redisEnv = util.Env.GetStringOr("REDIS_WORKER_ENV", "REDIS_URL")
 	var redisURL = util.Env.GetStringOr(redisEnv, "redis://127.0.0.1:6379")
 
 	var cnf = config.Config{

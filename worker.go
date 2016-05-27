@@ -17,7 +17,7 @@ var WorkerQueue chan chan WorkRequest
 
 func StartWorker() {
 	b := NewBackendServer("hiparchiver.workers")
-	numWorkers := util.Env.GetIntOr("WORKERS_ENV", 6)
+	numWorkers := util.Env.GetIntOr("WORKERS_ENV", 1)
 
 	hostname, err := os.Hostname()
 	if err != nil {

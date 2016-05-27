@@ -44,7 +44,9 @@ func main() {
 }
 
 func startWeb() {
-	s := &Server{*web.NewServer("./static/descriptor.json", "")}
+	s := &Server{*web.NewServer("./static/descriptor.json", "public")}
+	s.MountCommon()
+	s.MountInstallable("/installable")
 	s.MountConfigurable(s.configurable, s.postConfigurable)
 	s.Start()
 }

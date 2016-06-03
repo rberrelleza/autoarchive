@@ -10,6 +10,7 @@ import (
 
 	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	machinery "github.com/RichardKnop/machinery/v1"
+	"github.com/satori/go.uuid"
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
@@ -110,6 +111,7 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup) {
 			select {
 			case work := <-w.Work:
 				// Receive a work request.
+				jobID := uuid.NewV4().String()
 				w.Log.Infof("worker%d: Received work request for tid-%s", w.ID, work.TenantID)
 
 				tenants := s.NewTenants()
@@ -148,28 +150,36 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup) {
 
 				client := token.CreateClient()
 				client.BaseURL = baseURL
-				rooms, error := w.GetRooms(client)
+
+				job := Job{
+					Log:      w.Log.Record("jid", jobID).Record("tid", work.TenantID).Child(),
+					JobID:    jobID,
+					TenantID: work.TenantID,
+					Client:   client,
+				}
+
+				rooms, error := job.GetRooms()
 				if error != nil {
-					w.Log.Errorf("Failed to retrieve rooms for tid-%s", work.TenantID)
+					w.Log.Errorf("Failed to retrieve rooms")
 					continue
 				}
 
-				w.Log.Infof("Retrieved %d rooms for tid-%s", len(rooms), work.TenantID)
+				w.Log.Infof("Retrieved %d rooms", len(rooms))
 				processedRooms := 0
 				archivedRooms := 0
 				for _, room := range rooms {
-					archived := w.MaybeArchiveRoom(work.TenantID, room.ID, tenantConfiguration.Threshold, client)
+					archived := job.MaybeArchiveRoom(room.ID, tenantConfiguration.Threshold)
 					if archived {
 						archivedRooms++
 					}
 					processedRooms++
 					if processedRooms%100 == 0 {
-						w.Log.Infof("%d/%d rooms processed for tid-%s", processedRooms, len(rooms), work.TenantID)
-						w.Log.Infof("%d rooms archived so far for tid-%s", processedRooms, archivedRooms, work.TenantID)
+						w.Log.Infof("%d/%d rooms processed", processedRooms, len(rooms))
+						w.Log.Infof("%d rooms archived so far", archivedRooms)
 					}
 				}
 
-				w.Log.Infof("worker%d: Finished work request for tid-%s, archived %d rooms", w.ID, work.TenantID, archivedRooms)
+				w.Log.Infof("worker%d: Finished work request, archived %d rooms", w.ID, archivedRooms)
 
 			case <-w.QuitChan:
 				// We have been asked to stop.

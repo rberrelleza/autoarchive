@@ -63,7 +63,7 @@ func (w *Worker) GetRooms(client *hipchat.Client) ([]hipchat.Room, error) {
 // MaybeArchiveRoom retrieves the last active date of a room, compares that to the threshold passed, and archives the room if the result is negative.
 // The function will only 'pretend' to archive if the DRYRUN_ENV env var is set.
 // If a room doesn't have a last active date, the function will send a message to said room, to initialize that date.
-func (w *Worker) MaybeArchiveRoom(tenantID string, roomID int, threshold int, client *hipchat.Client) {
+func (w *Worker) MaybeArchiveRoom(tenantID string, roomID int, threshold int, client *hipchat.Client) bool {
 	daysSinceLastActive := w.getDaysSinceLastActive(roomID, client)
 
 	if daysSinceLastActive == -1 {
@@ -73,13 +73,17 @@ func (w *Worker) MaybeArchiveRoom(tenantID string, roomID int, threshold int, cl
 			message := fmt.Sprintf("This room hasn't been used in a while, but I can't tell how long (okay).  The room will be archived if it remains inactive for the next %d days.", threshold)
 			w.notify(roomID, message, client)
 		}
+	} else {
+
+		remainingIdleDaysAllowed := daysSinceLastActive - threshold
+
+		if remainingIdleDaysAllowed >= 0 {
+			w.archiveRoom(tenantID, roomID, client, daysSinceLastActive)
+			return true
+		}
 	}
 
-	remainingIdleDaysAllowed := daysSinceLastActive - threshold
-
-	if remainingIdleDaysAllowed >= 0 {
-		w.archiveRoom(tenantID, roomID, client, daysSinceLastActive)
-	}
+	return false
 }
 
 func (w *Worker) getDaysSinceLastActive(roomID int, client *hipchat.Client) int {
@@ -95,7 +99,7 @@ func (w *Worker) getDaysSinceLastActive(roomID int, client *hipchat.Client) int 
 	var deltaInDays int
 
 	if err != nil {
-		w.Log.Debugf("Client.Room.GetStatistics returns an error %v", response)
+		w.Log.Errorf("Client.Room.GetStatistics returns an error %v", response)
 	} else {
 		if stats.LastActive == "" {
 			w.Log.Debugf("last_active is empty for rid-%d %s", roomID, stats.LastActive)
@@ -130,7 +134,7 @@ func (w *Worker) archiveRoom(tenantID string, roomID int, client *hipchat.Client
 	}, try.ExponentialJitterBackoff)
 
 	if err != nil {
-		w.Log.Errorf("Client.Room.Get returned an error %v", response)
+		w.Log.Errorf("Client.Room.Get rid-%d tid-%s returned an error %v", roomID, tenantID, response)
 		return
 	}
 

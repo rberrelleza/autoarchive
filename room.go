@@ -62,7 +62,7 @@ func (w *Worker) MaybeArchiveRoom(tenantID string, roomID int, threshold int, cl
 
 	if daysSinceLastActive == -1 {
 		if isDryRun() {
-			w.Log.Debugf("Would've updated last_active of rid-%d ", roomID)
+			w.Log.Infof("Would've updated last_active of rid-%d ", roomID)
 		} else {
 			message := fmt.Sprintf("This room hasn't been used in a while, but I can't tell how long (okay).  The room will be archived if it remains inactive for the next %d days.", threshold)
 			w.notify(roomID, message, client)

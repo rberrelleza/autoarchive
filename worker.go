@@ -154,10 +154,14 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup) {
 					continue
 				}
 
-				w.Log.Infof("Retrieved %d rooms", len(rooms))
-
+				w.Log.Infof("Retrieved %d rooms for tid-%s", len(rooms), work.TenantID)
+				processedRooms := 0
 				for _, room := range rooms {
 					w.MaybeArchiveRoom(work.TenantID, room.ID, tenantConfiguration.Threshold, client)
+					processedRooms++
+					if processedRooms%100 == 0 {
+						w.Log.Infof("%d/%d rooms processed for tid-%s", processedRooms, len(rooms), work.TenantID)
+					}
 				}
 
 				w.Log.Infof("worker%d: Finished work request for tid-%s", w.ID, work.TenantID)

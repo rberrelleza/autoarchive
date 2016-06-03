@@ -3,9 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	_ "github.com/garyburd/redigo/redis"
 	"io"
+
+	_ "github.com/garyburd/redigo/redis"
 )
+
+const storeKey = "configurations"
 
 // Tenants manages a collection of known integration tenants
 type TenantConfigurations struct {
@@ -23,7 +26,7 @@ func (s *Server) NewTenantConfigurations() *TenantConfigurations {
 
 // Get returns a TenantConfiguration by id string
 func (t *TenantConfigurations) Get(id string) (*TenantConfiguration, error) {
-	store := t.server.NewTenantStore(id)
+	store := t.server.NewTenantStore(storeKey)
 	value, err := store.Get(id)
 
 	if err != nil {
@@ -46,13 +49,13 @@ func (t *TenantConfigurations) Set(configuration *TenantConfiguration) error {
 		return err
 	}
 
-	ts := t.server.NewTenantStore(configuration.ID)
-	return ts.Set(configuration.ID, w.Bytes())
+	store := t.server.NewTenantStore(storeKey)
+	return store.Set(configuration.ID, w.Bytes())
 }
 
 // Del removes a Tenant by id string
 func (t *TenantConfigurations) Del(id string) error {
-	store := t.server.NewTenantStore(id)
+	store := t.server.NewTenantStore(storeKey)
 	return store.Del(id)
 }
 

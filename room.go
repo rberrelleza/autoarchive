@@ -22,6 +22,9 @@ type options struct {
 	MaxResults int `url:"max-results"`
 }
 
+// GetRooms retrieves all the active rooms for a specific tenant. This function calls the HipChat /room API, batching
+// results in groups of 1000.
+// It returns a list of rooms, and or any errors.
 func (w *Worker) GetRooms(client *hipchat.Client) ([]hipchat.Room, error) {
 	var roomList []hipchat.Room
 	var response *http.Response
@@ -57,12 +60,15 @@ func (w *Worker) GetRooms(client *hipchat.Client) ([]hipchat.Room, error) {
 	return roomList, err
 }
 
+// MaybeArchiveRoom retrieves the last active date of a room, compares that to the threshold passed, and archives the room if the result is negative.
+// The function will only 'pretend' to archive if the DRYRUN_ENV env var is set.
+// If a room doesn't have a last active date, the function will send a message to said room, to initialize that date.
 func (w *Worker) MaybeArchiveRoom(tenantID string, roomID int, threshold int, client *hipchat.Client) {
 	daysSinceLastActive := w.getDaysSinceLastActive(roomID, client)
 
 	if daysSinceLastActive == -1 {
 		if isDryRun() {
-			w.Log.Infof("Would've updated last_active of rid-%d ", roomID)
+			w.Log.Infof("Would've updated last_active of rid-%d tid-%s", roomID, tenantID)
 		} else {
 			message := fmt.Sprintf("This room hasn't been used in a while, but I can't tell how long (okay).  The room will be archived if it remains inactive for the next %d days.", threshold)
 			w.notify(roomID, message, client)
@@ -99,7 +105,7 @@ func (w *Worker) getDaysSinceLastActive(roomID int, client *hipchat.Client) int 
 
 			lastActive, err := time.Parse(timeFormat, stats.LastActive)
 			if err != nil {
-				w.Log.Debugf("Couldn't parse rid-%d date error: %v", roomID, err)
+				w.Log.Errorf("Couldn't parse rid-%d date error: %v", roomID, err)
 			} else {
 				delta := time.Now().Sub(lastActive)
 				deltaInDays = int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware

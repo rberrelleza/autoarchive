@@ -17,11 +17,6 @@ const (
 	timeFormat = "2006-01-02T15:04:05+00:00"
 )
 
-type Room struct {
-	roomId      int
-	last_active string
-}
-
 type options struct {
 	StartIndex int `url:"start-index"`
 	MaxResults int `url:"max-results"`
@@ -62,12 +57,22 @@ func (w *Worker) GetRooms(client *hipchat.Client) ([]hipchat.Room, error) {
 	return roomList, err
 }
 
-func (w *Worker) MaybeArchiveRoom(tenantID string, roomId int, threshold int, client *hipchat.Client) {
-	daysSinceLastActive := w.getDaysSinceLastActive(roomId, client)
+func (w *Worker) MaybeArchiveRoom(tenantID string, roomID int, threshold int, client *hipchat.Client) {
+	daysSinceLastActive := w.getDaysSinceLastActive(roomID, client)
+
+	if daysSinceLastActive == -1 {
+		if isDryRun() {
+			w.Log.Debugf("Would've updated last_active of rid-%d ", roomID)
+		} else {
+			message := fmt.Sprintf("This room hasn't been used in a while, but I can't tell how long (okay).  The room will be archived if it remains inactive for the next %d days.", threshold)
+			w.notify(roomID, message, client)
+		}
+	}
+
 	remainingIdleDaysAllowed := daysSinceLastActive - threshold
 
 	if remainingIdleDaysAllowed >= 0 {
-		w.archiveRoom(tenantID, roomId, client, daysSinceLastActive)
+		w.archiveRoom(tenantID, roomID, client, daysSinceLastActive)
 	}
 }
 
@@ -81,12 +86,14 @@ func (w *Worker) getDaysSinceLastActive(roomID int, client *hipchat.Client) int 
 		return attempt < 5, err // try 5 times
 	}, try.ExponentialJitterBackoff)
 
+	var deltaInDays int
+
 	if err != nil {
 		w.Log.Debugf("Client.Room.GetStatistics returns an error %v", response)
-
 	} else {
 		if stats.LastActive == "" {
-			w.Log.Infof("last_active is empty for rid-%d %s", roomID, stats.LastActive)
+			w.Log.Debugf("last_active is empty for rid-%d %s", roomID, stats.LastActive)
+			deltaInDays = -1
 		} else {
 			w.Log.Debugf("rid-%d last_active %v", roomID, stats.LastActive)
 
@@ -95,16 +102,15 @@ func (w *Worker) getDaysSinceLastActive(roomID int, client *hipchat.Client) int 
 				w.Log.Debugf("Couldn't parse rid-%d date error: %v", roomID, err)
 			} else {
 				delta := time.Now().Sub(lastActive)
-				deltaInDays := int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware
+				deltaInDays = int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware
 				w.Log.Debugf("rid-%d has been idle for %d days", roomID, deltaInDays)
-				return deltaInDays
 			}
 		}
 	}
 
 	// default case if the room doesn't have an last_active date or
 	// if there was an error
-	return 0
+	return deltaInDays
 }
 
 func (w *Worker) archiveRoom(tenantID string, roomID int, client *hipchat.Client, idleDays int) {
@@ -133,13 +139,12 @@ func (w *Worker) archiveRoom(tenantID string, roomID int, client *hipchat.Client
 		Owner:         ownerID,
 	}
 
-	message := fmt.Sprintf("@%s This room was archived since it has been inactive for %d days. Go to https://hipchat.com/rooms/archive/%d to unarchive it.", room.Owner.MentionName, idleDays, roomID)
+	message := fmt.Sprintf("Archiving the room since it has been inactive for %d days. Go to https://hipchat.com/rooms/archive/%d to unarchive it.", idleDays, roomID)
 
-	dryRun := util.Env.GetInt("DRYRUN_ENV")
-	if dryRun == 1 {
+	if isDryRun() {
 		w.Log.Infof("Would've archived tid-%s rid-%d: %s", tenantID, roomID, message)
 	} else {
-		w.notifyArchival(roomID, message, client)
+		w.notify(roomID, message, client)
 
 		resp, err := client.Room.Update(strconv.Itoa(roomID), &updateRequest)
 
@@ -153,7 +158,7 @@ func (w *Worker) archiveRoom(tenantID string, roomID int, client *hipchat.Client
 	}
 }
 
-func (w *Worker) notifyArchival(roomID int, message string, client *hipchat.Client) {
+func (w *Worker) notify(roomID int, message string, client *hipchat.Client) {
 	notificationRequest := hipchat.NotificationRequest{
 		Message:       message,
 		Notify:        true,
@@ -167,4 +172,13 @@ func (w *Worker) notifyArchival(roomID int, message string, client *hipchat.Clie
 		contents, err := ioutil.ReadAll(resp.Body)
 		w.Log.Errorf("%s %s", contents, err)
 	}
+}
+
+func isDryRun() bool {
+	dryRun := util.Env.GetInt("DRYRUN_ENV")
+	if dryRun == 1 {
+		return true
+	}
+
+	return false
 }

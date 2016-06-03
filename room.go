@@ -68,7 +68,7 @@ func (j *Job) MaybeArchiveRoom(roomID int, threshold int) bool {
 
 	if daysSinceLastActive == -1 {
 		if isDryRun() {
-			j.Log.Infof("Would've updated last_active of rid-%d", roomID)
+			j.Log.Record("rid", roomID).Infof("Would've updated last_active")
 		} else {
 			message := fmt.Sprintf("This room hasn't been used in a while, but I can't tell how long (okay).  The room will be archived if it remains inactive for the next %d days.", threshold)
 			j.notify(roomID, message)
@@ -99,21 +99,21 @@ func (j *Job) getDaysSinceLastActive(roomID int) int {
 	var deltaInDays int
 
 	if err != nil {
-		j.Log.Errorf("Client.Room.GetStatistics returns an error %v", response)
+		j.Log.Record("rid", roomID).Errorf("Client.Room.GetStatistics returned an error %v", response)
 	} else {
 		if stats.LastActive == "" {
-			j.Log.Debugf("last_active is empty for rid-%d %s", roomID, stats.LastActive)
+			j.Log.Record("rid", roomID).Debugf("last_active is empty")
 			deltaInDays = -1
 		} else {
-			j.Log.Debugf("rid-%d last_active %v", roomID, stats.LastActive)
+			j.Log.Record("rid", roomID).Debugf("last_active %v", stats.LastActive)
 
 			lastActive, err := time.Parse(timeFormat, stats.LastActive)
 			if err != nil {
-				j.Log.Errorf("Couldn't parse rid-%d date error: %v", roomID, err)
+				j.Log.Record("rid", roomID).Errorf("Couldn't parse date error: %v", err)
 			} else {
 				delta := time.Now().Sub(lastActive)
 				deltaInDays = int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware
-				j.Log.Debugf("rid-%d has been idle for %d days", roomID, deltaInDays)
+				j.Log.Record("rid", roomID).Debugf("Has been idle for %d days", deltaInDays)
 			}
 		}
 	}
@@ -134,7 +134,7 @@ func (j *Job) archiveRoom(roomID int, idleDays int) {
 	}, try.ExponentialJitterBackoff)
 
 	if err != nil {
-		j.Log.Errorf("Client.Room.Get rid-%d returned an error %v", roomID, response)
+		j.Log.Record("rid", roomID).Errorf("Client.Room.Get returned an error %v", response)
 		return
 	}
 
@@ -152,17 +152,17 @@ func (j *Job) archiveRoom(roomID int, idleDays int) {
 	message := fmt.Sprintf("Archiving the room since it has been inactive for %d days. Go to https://hipchat.com/rooms/archive/%d to unarchive it.", idleDays, roomID)
 
 	if isDryRun() {
-		j.Log.Infof("Would've archived rid-%d: %s", roomID, message)
+		j.Log.Record("rid", roomID).Infof("Would've archived: %s", message)
 	} else {
 		j.notify(roomID, message)
 		resp, err := j.Client.Room.Update(strconv.Itoa(roomID), &updateRequest)
 
 		if err != nil {
-			j.Log.Errorf("Client.Room.Update returned an error when archiving")
+			j.Log.Record("rid", roomID).Errorf("Client.Room.Update returned an error when archiving")
 			contents, err := ioutil.ReadAll(resp.Body)
-			j.Log.Errorf("%s %s", contents, err)
+			j.Log.Record("rid", roomID).Errorf("%s %s", contents, err)
 		} else {
-			j.Log.Infof("Archived rid-%d", roomID)
+			j.Log.Record("rid", roomID).Infof("Archived", roomID)
 		}
 	}
 }

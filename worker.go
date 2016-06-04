@@ -187,7 +187,7 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 					}
 				}
 
-				job.Log.Infof("Finished work request, archived %d rooms", w.ID, archivedRooms)
+				job.Log.Infof("Finished work request, archived %d rooms", archivedRooms)
 
 			case <-w.QuitChan:
 				// We have been asked to stop.

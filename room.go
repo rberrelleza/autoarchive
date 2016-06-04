@@ -63,7 +63,7 @@ func (j *Job) GetRooms() ([]hipchat.Room, error) {
 // MaybeArchiveRoom retrieves the last active date of a room, compares that to the threshold passed, and archives the room if the result is negative.
 // The function will only 'pretend' to archive if the DRYRUN_ENV env var is set.
 // If a room doesn't have a last active date, the function will send a message to said room, to initialize that date.
-func (j *Job) MaybeArchiveRoom(roomID int, threshold int) bool {
+func (j *Job) MaybeArchiveRoom(roomID int, threshold int, hipchatBaseURL string) bool {
 	daysSinceLastActive := j.getDaysSinceLastActive(roomID)
 
 	if daysSinceLastActive == -1 {
@@ -78,7 +78,7 @@ func (j *Job) MaybeArchiveRoom(roomID int, threshold int) bool {
 		remainingIdleDaysAllowed := daysSinceLastActive - threshold
 
 		if remainingIdleDaysAllowed >= 0 {
-			j.archiveRoom(roomID, daysSinceLastActive)
+			j.archiveRoom(roomID, daysSinceLastActive, hipchatBaseURL)
 			return true
 		}
 	}
@@ -123,7 +123,7 @@ func (j *Job) getDaysSinceLastActive(roomID int) int {
 	return deltaInDays
 }
 
-func (j *Job) archiveRoom(roomID int, idleDays int) {
+func (j *Job) archiveRoom(roomID int, idleDays int, hipchatBaseURL string) {
 	var response *http.Response
 	var room *hipchat.Room
 
@@ -149,7 +149,7 @@ func (j *Job) archiveRoom(roomID int, idleDays int) {
 		Owner:         ownerID,
 	}
 
-	message := fmt.Sprintf("Archiving the room since it has been inactive for %d days. Go to https://hipchat.com/rooms/archive/%d to unarchive it.", idleDays, roomID)
+	message := fmt.Sprintf("Archiving the room since it has been inactive for %d days. Go to %s/rooms/archive/%d to unarchive it.", hipchatBaseURL, idleDays, roomID)
 
 	if isDryRun() {
 		j.Log.Record("rid", roomID).Infof("Would've archived: %s", message)

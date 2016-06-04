@@ -170,23 +170,24 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 				processedRooms := 0
 				archivedRooms := 0
 				for _, room := range rooms {
-					archived := job.MaybeArchiveRoom(room.ID, tenantConfiguration.Threshold)
+					archived := job.MaybeArchiveRoom(room.ID, tenantConfiguration.Threshold, tenant.Links.Base)
 					if archived {
 						archivedRooms++
 					}
+
 					processedRooms++
 					if processedRooms%100 == 0 {
-						w.Log.Infof("%d/%d rooms processed", processedRooms, len(rooms))
-						w.Log.Infof("%d rooms archived so far", archivedRooms)
+						job.Log.Infof("%d/%d rooms processed", processedRooms, len(rooms))
+						job.Log.Infof("%d rooms archived so far", archivedRooms)
 					}
 
 					if processedRooms > maxRoomsToProcess {
-						w.Log.Infof("Quota of %d rooms reached", maxRoomsToProcess)
+						job.Log.Infof("Quota of %d rooms reached", maxRoomsToProcess)
 						break
 					}
 				}
 
-				w.Log.Infof("worker%d: Finished work request, archived %d rooms", w.ID, archivedRooms)
+				job.Log.Infof("Finished work request, archived %d rooms", w.ID, archivedRooms)
 
 			case <-w.QuitChan:
 				// We have been asked to stop.

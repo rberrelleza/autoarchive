@@ -16,9 +16,11 @@ import (
 
 var WorkerQueue chan chan WorkRequest
 
+// StartWorker starts the worker jobs of the process. It will start a number of workers equal to the value of the WORKERS_ENV env var, or 1
 func StartWorker() {
 	b := NewBackendServer("hiparchiver.workers")
 	numWorkers := util.Env.GetIntOr("WORKERS_ENV", 1)
+	maxRoomsToProcess := util.Env.GetIntOr("MAX_ROOMS", 1000000)
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -29,7 +31,7 @@ func StartWorker() {
 	WorkerQueue = make(chan chan WorkRequest, numWorkers)
 	wg := &sync.WaitGroup{}
 
-	internalWorkers := b.startInternalWorkers(numWorkers, wg)
+	internalWorkers := b.startInternalWorkers(numWorkers, wg, maxRoomsToProcess)
 
 	// this is the server that picks up jobs from the queue
 	taskServer := NewTaskServer()
@@ -44,13 +46,13 @@ func StartWorker() {
 	}
 }
 
-func (server *Server) startInternalWorkers(numWorkers int, wg *sync.WaitGroup) *[]Worker {
+func (server *Server) startInternalWorkers(numWorkers int, wg *sync.WaitGroup, maxRoomsToProcess int) *[]Worker {
 	internalWorkers := make([]Worker, numWorkers)
 
 	for i := range internalWorkers {
 		server.Log.Infof("Starting worker-%d", i+1)
 		internalWorkers[i] = server.newWorker(i+1, WorkerQueue)
-		internalWorkers[i].start(server, wg)
+		internalWorkers[i].start(server, wg, maxRoomsToProcess)
 	}
 
 	return &internalWorkers
@@ -98,7 +100,7 @@ func (server *Server) newWorker(id int, workerQueue chan chan WorkRequest) Worke
 
 // This function "starts" the worker by starting a goroutine, that is
 // an infinite "for-select" loop.
-func (w Worker) start(s *Server, wg *sync.WaitGroup) {
+func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 	wg.Add(1)
 
 	go func() {
@@ -176,6 +178,11 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup) {
 					if processedRooms%100 == 0 {
 						w.Log.Infof("%d/%d rooms processed", processedRooms, len(rooms))
 						w.Log.Infof("%d rooms archived so far", archivedRooms)
+					}
+
+					if processedRooms > maxRoomsToProcess {
+						w.Log.Infof("Quota of %d rooms reached", maxRoomsToProcess)
+						break
 					}
 				}
 

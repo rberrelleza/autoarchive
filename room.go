@@ -149,7 +149,7 @@ func (j *Job) archiveRoom(roomID int, idleDays int, hipchatBaseURL string) {
 		Owner:         ownerID,
 	}
 
-	message := fmt.Sprintf("Archiving the room since it has been inactive for %d days. Go to %s/rooms/archive/%d to unarchive it.", hipchatBaseURL, idleDays, roomID)
+	message := fmt.Sprintf("Archiving the room since it has been inactive for %d days. Go to %s/rooms/archive/%d to unarchive it.", idleDays, hipchatBaseURL, roomID)
 
 	if isDryRun() {
 		j.Log.Record("rid", roomID).Infof("Would've archived: %s", message)

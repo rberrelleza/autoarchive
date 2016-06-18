@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	"github.com/rberrelleza/try"
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
@@ -63,58 +62,51 @@ func (j *Job) GetRooms() ([]hipchat.Room, error) {
 // MaybeArchiveRoom retrieves the last active date of a room, compares that to the threshold passed, and archives the room if the result is negative.
 // The function will only 'pretend' to archive if the DRYRUN_ENV env var is set.
 // If a room doesn't have a last active date, the function will send a message to said room, to initialize that date.
-func (j *Job) MaybeArchiveRoom(roomID int, threshold int, hipchatBaseURL string) bool {
-	daysSinceLastActive := j.getDaysSinceLastActive(roomID)
+func (j *Job) MaybeArchiveRoom(roomID int, threshold int) bool {
 
-	if daysSinceLastActive == -1 {
-		if isDryRun() {
-			j.Log.Record("rid", roomID).Infof("Would've updated last_active")
-		} else {
-			message := fmt.Sprintf("This room hasn't been used in a while, but I can't tell how long (okay).  The room will be archived if it remains inactive for the next %d days.", threshold)
-			j.notify(roomID, message)
-		}
+	stats, err := j.getRoomStats(roomID)
+
+	if err != nil {
+		j.Log.Record("rid", roomID).Errorf("Client.Room.GetStatistics returned an error %v", err)
 	} else {
+		daysSinceLastActive := j.getDaysSinceLastActive(roomID, stats)
 
-		remainingIdleDaysAllowed := daysSinceLastActive - threshold
+		if daysSinceLastActive == -1 {
+			if j.DryRun {
+				j.Log.Record("rid", roomID).Infof("Would've updated last_active")
+			} else {
+				message := fmt.Sprintf("This room hasn't been used in a while, but I can't tell how long (okay).  The room will be archived if it remains inactive for the next %d days.", threshold)
+				j.notify(roomID, message)
+			}
+		} else {
 
-		if remainingIdleDaysAllowed >= 0 {
-			j.archiveRoom(roomID, daysSinceLastActive, hipchatBaseURL)
-			return true
+			remainingIdleDaysAllowed := daysSinceLastActive - threshold
+
+			if remainingIdleDaysAllowed >= 0 {
+				j.archiveRoom(roomID, daysSinceLastActive)
+				return true
+			}
 		}
 	}
 
 	return false
 }
 
-func (j *Job) getDaysSinceLastActive(roomID int) int {
-	var response *http.Response
-	var stats *hipchat.RoomStatistics
+func (j *Job) getDaysSinceLastActive(roomID int, stats *hipchat.RoomStatistics) int {
+	var deltaInDays = -1
 
-	err := try.DoWithBackoff(func(attempt int) (bool, error) {
-		var err error
-		stats, response, err = j.Client.Room.GetStatistics(strconv.Itoa(roomID))
-		return attempt < 5, err // try 5 times
-	}, try.ExponentialJitterBackoff)
-
-	var deltaInDays int
-
-	if err != nil {
-		j.Log.Record("rid", roomID).Errorf("Client.Room.GetStatistics returned an error %v", response)
+	if stats.LastActive == "" {
+		j.Log.Record("rid", roomID).Debugf("last_active is empty")
 	} else {
-		if stats.LastActive == "" {
-			j.Log.Record("rid", roomID).Debugf("last_active is empty")
-			deltaInDays = -1
+		j.Log.Record("rid", roomID).Debugf("last_active %v", stats.LastActive)
+		lastActive, err := time.Parse(timeFormat, stats.LastActive)
+		if err != nil {
+			j.Log.Record("rid", roomID).Errorf("Couldn't parse date error: %v", err)
 		} else {
-			j.Log.Record("rid", roomID).Debugf("last_active %v", stats.LastActive)
-
-			lastActive, err := time.Parse(timeFormat, stats.LastActive)
-			if err != nil {
-				j.Log.Record("rid", roomID).Errorf("Couldn't parse date error: %v", err)
-			} else {
-				delta := time.Now().Sub(lastActive)
-				deltaInDays = int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware
-				j.Log.Record("rid", roomID).Debugf("Has been idle for %d days", deltaInDays)
-			}
+			delta := j.Clock.Now().Sub(lastActive)
+			j.Log.Record("rid", roomID).Debugf("Has been idle for %s", delta)
+			deltaInDays = int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware
+			j.Log.Record("rid", roomID).Debugf("Has been idle for %d days", deltaInDays)
 		}
 	}
 
@@ -123,15 +115,24 @@ func (j *Job) getDaysSinceLastActive(roomID int) int {
 	return deltaInDays
 }
 
-func (j *Job) archiveRoom(roomID int, idleDays int, hipchatBaseURL string) {
+func (j *Job) getRoomStats(roomID int) (*hipchat.RoomStatistics, error) {
+	var stats *hipchat.RoomStatistics
 	var response *http.Response
-	var room *hipchat.Room
 
 	err := try.DoWithBackoff(func(attempt int) (bool, error) {
 		var err error
-		room, response, err = j.Client.Room.Get(strconv.Itoa(roomID))
+		stats, response, err = j.Client.Room.GetStatistics(strconv.Itoa(roomID))
 		return attempt < 5, err // try 5 times
 	}, try.ExponentialJitterBackoff)
+
+	return stats, err
+}
+
+func (j *Job) archiveRoom(roomID int, idleDays int) {
+	var response *http.Response
+	var room *hipchat.Room
+
+	room, err := j.getRoom(roomID)
 
 	if err != nil {
 		j.Log.Record("rid", roomID).Errorf("Client.Room.Get returned an error %v", response)
@@ -149,9 +150,9 @@ func (j *Job) archiveRoom(roomID int, idleDays int, hipchatBaseURL string) {
 		Owner:         ownerID,
 	}
 
-	message := fmt.Sprintf("Archiving the room since it has been inactive for %d days. Go to %s/rooms/archive/%d to unarchive it.", idleDays, hipchatBaseURL, roomID)
+	message := fmt.Sprintf("Archiving the room since it has been inactive for %d days. Go to %s/rooms/archive/%d to unarchive it.", idleDays, j.HipChatURL, roomID)
 
-	if isDryRun() {
+	if j.DryRun {
 		j.Log.Record("rid", roomID).Infof("Would've archived: %s", message)
 	} else {
 		j.notify(roomID, message)
@@ -165,6 +166,17 @@ func (j *Job) archiveRoom(roomID int, idleDays int, hipchatBaseURL string) {
 			j.Log.Record("rid", roomID).Infof("Archived", roomID)
 		}
 	}
+}
+
+func (j *Job) getRoom(roomID int) (*hipchat.Room, error) {
+	var room *hipchat.Room
+	err := try.DoWithBackoff(func(attempt int) (bool, error) {
+		var err error
+		room, _, err = j.Client.Room.Get(strconv.Itoa(roomID))
+		return attempt < 5, err // try 5 times
+	}, try.ExponentialJitterBackoff)
+
+	return room, err
 }
 
 func (j *Job) notify(roomID int, message string) {
@@ -181,13 +193,4 @@ func (j *Job) notify(roomID int, message string) {
 		contents, err := ioutil.ReadAll(resp.Body)
 		j.Log.Errorf("%s %s", contents, err)
 	}
-}
-
-func isDryRun() bool {
-	dryRun := util.Env.GetInt("DRYRUN_ENV")
-	if dryRun == 1 {
-		return true
-	}
-
-	return false
 }

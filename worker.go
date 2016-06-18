@@ -153,11 +153,16 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 				client := token.CreateClient()
 				client.BaseURL = baseURL
 
+				dryRun := util.Env.GetInt("DRYRUN_ENV")
+
 				job := Job{
-					Log:      w.Log.Record("jid", jobID).Record("tid", work.TenantID).Child(),
-					JobID:    jobID,
-					TenantID: work.TenantID,
-					Client:   client,
+					Log:        w.Log.Record("jid", jobID).Record("tid", work.TenantID).Child(),
+					JobID:      jobID,
+					TenantID:   work.TenantID,
+					Client:     client,
+					Clock:      &realClock{},
+					HipChatURL: tenant.Links.Base,
+					DryRun:     dryRun == 1,
 				}
 
 				rooms, error := job.GetRooms()
@@ -170,7 +175,7 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 				processedRooms := 0
 				archivedRooms := 0
 				for _, room := range rooms {
-					archived := job.MaybeArchiveRoom(room.ID, tenantConfiguration.Threshold, tenant.Links.Base)
+					archived := job.MaybeArchiveRoom(room.ID, tenantConfiguration.Threshold)
 					if archived {
 						archivedRooms++
 					}

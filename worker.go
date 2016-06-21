@@ -8,6 +8,7 @@ import (
 	"sync"
 	"syscall"
 
+	"bitbucket.org/rbergman/go-hipchat-connect/tenant"
 	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	machinery "github.com/RichardKnop/machinery/v1"
 	"github.com/satori/go.uuid"
@@ -131,29 +132,15 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 					continue
 				}
 
-				credentials := hipchat.ClientCredentials{
-					ClientID:     tenant.ID,
-					ClientSecret: tenant.Secret,
-				}
+				dryRun := util.Env.GetInt("DRYRUN_ENV") == 1
+				w.Log.Infof("Starting job in dry run? %t", dryRun)
 
-				newClient := hipchat.NewClient("")
-				baseURL, _ := url.Parse(tenant.Links.API + "/")
-				newClient.BaseURL = baseURL
-				w.Log.Infof("NewClient.BaseURL %s", newClient.BaseURL)
-				token, _, err := newClient.GenerateToken(
-					credentials,
-					[]string{hipchat.ScopeManageRooms, hipchat.ScopeViewGroup, hipchat.ScopeSendNotification, hipchat.ScopeAdminRoom})
-
+				client, err := w.getClient(tenant)
 				if err != nil {
 					// this typically means the group uninstalled the plugin
 					w.Log.Errorf("Client.GetAccessToken returns an error %v", err)
 					continue
 				}
-
-				client := token.CreateClient()
-				client.BaseURL = baseURL
-
-				dryRun := util.Env.GetInt("DRYRUN_ENV")
 
 				job := Job{
 					Log:        w.Log.Record("jid", jobID).Record("tid", work.TenantID).Child(),
@@ -162,10 +149,11 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 					Client:     client,
 					Clock:      &realClock{},
 					HipChatURL: tenant.Links.Base,
-					DryRun:     dryRun == 1,
+					DryRun:     dryRun,
 				}
 
 				rooms, error := job.GetRooms()
+
 				if error != nil {
 					w.Log.Errorf("Failed to retrieve rooms")
 					continue
@@ -175,6 +163,7 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 				processedRooms := 0
 				archivedRooms := 0
 				for _, room := range rooms {
+
 					archived := job.MaybeArchiveRoom(room.ID, tenantConfiguration.Threshold)
 					if archived {
 						archivedRooms++
@@ -201,6 +190,30 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 			}
 		}
 	}()
+}
+
+func (w Worker) getClient(tenant *tenant.Tenant) (*hipchat.Client, error) {
+	credentials := hipchat.ClientCredentials{
+		ClientID:     tenant.ID,
+		ClientSecret: tenant.Secret,
+	}
+
+	newClient := hipchat.NewClient("")
+	baseURL, _ := url.Parse(tenant.Links.API + "/")
+	newClient.BaseURL = baseURL
+	w.Log.Infof("NewClient.BaseURL %s", newClient.BaseURL)
+	token, _, err := newClient.GenerateToken(
+		credentials,
+		[]string{hipchat.ScopeManageRooms, hipchat.ScopeViewGroup, hipchat.ScopeSendNotification, hipchat.ScopeAdminRoom})
+
+	if err != nil {
+		return nil, err
+	}
+
+	client := token.CreateClient()
+	client.BaseURL = baseURL
+
+	return client, nil
 }
 
 // Stop tells the worker to stop listening for work requests.

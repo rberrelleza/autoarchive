@@ -163,9 +163,9 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 
 func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int) (int, int) {
 
-	rooms, error := job.GetRooms()
+	rooms, err := job.GetRooms()
 
-	if error != nil {
+	if err != nil {
 		w.Log.Errorf("Failed to retrieve rooms")
 		return -1, -1
 	}
@@ -173,12 +173,11 @@ func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int)
 	processedRooms := 0
 	archivedRooms := 0
 
-	w.Log.Infof("Retrieved %d rooms", len(rooms))
-
 	for _, room := range rooms {
 		roomStatistics, err := job.GetRoomStats(room.ID)
-		job.Log.Errorf("Couldn't retrieve the stats of room %d, ignoring: %v", room.ID, err)
-		if err == nil {
+
+		if err != nil {
+			job.Log.Errorf("Couldn't retrieve the stats of room %d, ignoring: %v", room.ID, err)
 			continue
 		}
 

@@ -156,7 +156,7 @@ func (j *Job) ArchiveRoom(roomID int, daysSinceLastActive int) {
 			contents, err := ioutil.ReadAll(resp.Body)
 			j.Log.Record("rid", roomID).Errorf("%s %s", contents, err)
 		} else {
-			j.Log.Record("rid", roomID).Infof("Archived %d", roomID)
+			j.Log.Record("rid", roomID).Infof("Archived room, idle for %d days", daysSinceLastActive)
 		}
 	}
 }

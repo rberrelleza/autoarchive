@@ -132,8 +132,14 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 					continue
 				}
 
-				dryRun := util.Env.GetInt("DRYRUN_ENV") == 1
-				w.Log.Infof("Starting job in dry run? %t", dryRun)
+				job := Job{
+					Log:        w.Log.Record("jid", jobID).Record("tid", work.TenantID).Child(),
+					JobID:      jobID,
+					TenantID:   work.TenantID,
+					Clock:      &realClock{},
+					HipChatURL: tenant.Links.Base,
+					DryRun:     util.Env.GetInt("DRYRUN_ENV") == 1,
+				}
 
 				client, err := w.getClient(tenant)
 				if err != nil {
@@ -142,46 +148,9 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 					continue
 				}
 
-				job := Job{
-					Log:        w.Log.Record("jid", jobID).Record("tid", work.TenantID).Child(),
-					JobID:      jobID,
-					TenantID:   work.TenantID,
-					Client:     client,
-					Clock:      &realClock{},
-					HipChatURL: tenant.Links.Base,
-					DryRun:     dryRun,
-				}
-
-				rooms, error := job.GetRooms()
-
-				if error != nil {
-					w.Log.Errorf("Failed to retrieve rooms")
-					continue
-				}
-
-				w.Log.Infof("Retrieved %d rooms", len(rooms))
-				processedRooms := 0
-				archivedRooms := 0
-				for _, room := range rooms {
-
-					archived := job.MaybeArchiveRoom(room.ID, tenantConfiguration.Threshold)
-					if archived {
-						archivedRooms++
-					}
-
-					processedRooms++
-					if processedRooms%100 == 0 {
-						job.Log.Infof("%d/%d rooms processed", processedRooms, len(rooms))
-						job.Log.Infof("%d rooms archived so far", archivedRooms)
-					}
-
-					if processedRooms > maxRoomsToProcess {
-						job.Log.Infof("Quota of %d rooms reached", maxRoomsToProcess)
-						break
-					}
-				}
-
-				job.Log.Infof("Finished work request, archived %d rooms", archivedRooms)
+				job.Client = client
+				processedRooms, archivedRooms := w.autoArchiveRooms(&job, tenantConfiguration.Threshold, maxRoomsToProcess)
+				job.Log.Infof("Finished work request, archived %d/%d rooms", archivedRooms, processedRooms)
 
 			case <-w.QuitChan:
 				// We have been asked to stop.
@@ -190,6 +159,50 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 			}
 		}
 	}()
+}
+
+func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int) (int, int) {
+
+	rooms, error := job.GetRooms()
+
+	if error != nil {
+		w.Log.Errorf("Failed to retrieve rooms")
+		return -1, -1
+	}
+
+	processedRooms := 0
+	archivedRooms := 0
+
+	w.Log.Infof("Retrieved %d rooms", len(rooms))
+
+	for _, room := range rooms {
+		roomStatistics, err := job.GetRoomStats(room.ID)
+		job.Log.Errorf("Couldn't retrieve the stats of room %d, ignoring: %v", room.ID, err)
+		if err == nil {
+			continue
+		}
+
+		daysSinceLastActive := job.GetDaysSinceLastActive(room.ID, roomStatistics)
+		if daysSinceLastActive == -1 {
+			job.TouchRoom(room.ID, threshold)
+		} else if job.ShouldArchiveRoom(room.ID, daysSinceLastActive, threshold) {
+			job.ArchiveRoom(room.ID, daysSinceLastActive)
+			archivedRooms++
+		}
+
+		processedRooms++
+		if processedRooms%100 == 0 {
+			job.Log.Infof("%d/%d rooms processed", processedRooms, len(rooms))
+			job.Log.Infof("%d rooms archived so far", archivedRooms)
+		}
+
+		if processedRooms > maxRoomsToProcess {
+			job.Log.Infof("Quota of %d rooms reached", maxRoomsToProcess)
+			break
+		}
+	}
+
+	return processedRooms, archivedRooms
 }
 
 func (w Worker) getClient(tenant *tenant.Tenant) (*hipchat.Client, error) {

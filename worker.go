@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net/url"
 	"os"
 	"os/signal"
@@ -168,6 +169,12 @@ func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int)
 	if err != nil {
 		w.Log.Errorf("Failed to retrieve rooms")
 		return -1, -1
+	}
+
+	// Shuffle rooms to make sure we don't always hit the oldest one first
+	for i := range rooms {
+		j := rand.Intn(i + 1)
+		rooms[i], rooms[j] = rooms[j], rooms[i]
 	}
 
 	processedRooms := 0

@@ -1,7 +1,10 @@
 {
-	"ImportPath": "github.com/rberrelleza/autoarchive",
+	"ImportPath": "bitbucket.org/ramiroberrelleza/autoarchive",
 	"GoVersion": "go1.6",
 	"GodepVersion": "v71",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/model",
@@ -96,10 +99,6 @@
 			"Rev": "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
 		},
 		{
-			"ImportPath": "github.com/jasonlvhit/gocron",
-			"Rev": "0b564bf03e9665599efbcba1c6fba3d84212c197"
-		},
-		{
 			"ImportPath": "github.com/lonnblad/negroni-etag/etag",
 			"Rev": "83de34f124a6e9370753e128e4bc5a111326bd29"
 		},
@@ -127,8 +126,8 @@
 		},
 		{
 			"ImportPath": "github.com/tbruyelle/hipchat-go/hipchat",
-			"Comment": "v1.1-30-gbc90234",
-			"Rev": "bc9023448a8bce4ad266fbfced5556aacbe6ae04"
+			"Comment": "v1.1-44-gf8db42c",
+			"Rev": "f8db42c69e236ccc2151d36091a32c299b3f2bf2"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",

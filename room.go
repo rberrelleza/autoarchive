@@ -33,7 +33,10 @@ func (j *Job) GetRooms() ([]hipchat.Room, error) {
 
 	for {
 		var rooms *hipchat.Rooms
-		opt := options{startIndex, maxResults}
+		opt := &hipchat.RoomsListOptions{
+			ListOptions:     hipchat.ListOptions{StartIndex: startIndex, MaxResults: maxResults},
+			IncludePrivate:  true,
+			IncludeArchived: false}
 
 		err = try.DoWithBackoff(func(attempt int) (bool, error) {
 			var err error

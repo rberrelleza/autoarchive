@@ -3,8 +3,8 @@
   "name": "Auto Archiver",
   "description": "Automatically archive your rooms after they have bee idle for a while.",
   "vendor": {
-      "name": "Ramiro Berrelleza",
-      "url": "http://ramiroberrelleza.com"
+      "name": "hipchat",
+      "url": "http://hipchat.com"
   },
   "links": {
       "self": "{{.BaseURL}}/descriptor",
@@ -12,7 +12,7 @@
   },
   "capabilities": {
     "hipchatApiConsumer": {
-      "avatar": "https://s3.amazonaws.com/uploads.hipchat.com/167300/1202992/Xv8F9Cf7pGRemNI/archiver.png",
+      "avatar": "{{.BaseURL}}/archiver.png",
       "scopes": [
           "view_group",
           "manage_rooms",

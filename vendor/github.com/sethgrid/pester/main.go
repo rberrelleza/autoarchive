@@ -33,6 +33,7 @@ type Client struct {
 	MaxRetries  int
 	Backoff     BackoffStrategy
 	KeepLog     bool
+	Success     SuccessStrategy
 
 	SuccessReqNum   int
 	SuccessRetryNum int
@@ -83,6 +84,7 @@ func New() *Client {
 		MaxRetries:  DefaultClient.MaxRetries,
 		Backoff:     DefaultClient.Backoff,
 		ErrLog:      DefaultClient.ErrLog,
+		Success:     DefaultClient.Success,
 		wg:          &sync.WaitGroup{},
 	}
 }
@@ -98,8 +100,16 @@ func NewExtendedClient(hc *http.Client) *Client {
 // BackoffStrategy is used to determine how long a retry request should wait until attempted
 type BackoffStrategy func(retry int) time.Duration
 
+// SuccessStrategy is used to determine if a request succeded
+type SuccessStrategy func(resp *http.Response, err error) bool
+
+// DefaultSuccessStrategy provides a default
+func DefaultSuccessStrategy(resp *http.Response, err error) bool {
+	return err == nil && resp.StatusCode < 500
+}
+
 // DefaultClient provides sensible defaults
-var DefaultClient = &Client{Concurrency: 1, MaxRetries: 3, Backoff: DefaultBackoff, ErrLog: []ErrEntry{}}
+var DefaultClient = &Client{Concurrency: 1, MaxRetries: 3, Backoff: DefaultBackoff, ErrLog: []ErrEntry{}, Success: DefaultSuccessStrategy}
 
 // DefaultBackoff always returns 1 second
 func DefaultBackoff(_ int) time.Duration {
@@ -264,7 +274,7 @@ func (c *Client) pester(p params) (*http.Response, error) {
 
 				// Early return if we have a valid result
 				// Only retry (ie, continue the loop) on 5xx status codes
-				if err == nil && resp.StatusCode < 500 {
+				if c.Success(resp, err) {
 					multiplexCh <- result{resp: resp, err: err, req: n, retry: i}
 					return
 				}

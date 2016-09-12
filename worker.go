@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -249,6 +250,11 @@ func (w Worker) getClient(tenant *tenant.Tenant) (*hipchat.Client, error) {
 	httpClient.MaxRetries = 5
 	httpClient.Backoff = pester.ExponentialJitterBackoff
 	httpClient.KeepLog = true
+	httpClient.Success = func(resp *http.Response, err error) bool {
+		w.Log.Infof("Got an error on the request: %v | %v", err, resp.StatusCode)
+		return err == nil && resp.StatusCode < 500 && resp.StatusCode != 429
+	}
+
 	client.SetHTTPClient(httpClient)
 
 	return client, nil

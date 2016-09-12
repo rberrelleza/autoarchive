@@ -113,6 +113,10 @@
 			"Rev": "f9ab0dce87d815821e221626b772e3475a0d2749"
 		},
 		{
+			"ImportPath": "github.com/sethgrid/pester",
+			"Rev": "d5f1141f100f48446120782caa0b07b7cd75d0f0"
+		},
+		{
 			"ImportPath": "github.com/streadway/amqp",
 			"Rev": "2e25825abdbd7752ff08b270d313b93519a0a232"
 		},

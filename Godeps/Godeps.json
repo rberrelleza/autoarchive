@@ -2,9 +2,6 @@
 	"ImportPath": "bitbucket.org/ramiroberrelleza/autoarchive",
 	"GoVersion": "go1.6",
 	"GodepVersion": "v71",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/model",
@@ -114,10 +111,6 @@
 			"ImportPath": "github.com/satori/go.uuid",
 			"Comment": "v1.0.0",
 			"Rev": "f9ab0dce87d815821e221626b772e3475a0d2749"
-		},
-		{
-			"ImportPath": "github.com/sethgrid/pester",
-			"Rev": "8053687f99650573b28fb75cddf3f295082704d7"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",

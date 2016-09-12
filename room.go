@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rberrelleza/try"
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
@@ -38,11 +37,7 @@ func (j *Job) GetRooms() ([]hipchat.Room, error) {
 			IncludePrivate:  true,
 			IncludeArchived: false}
 
-		err = try.DoWithBackoff(func(attempt int) (bool, error) {
-			var err error
-			rooms, response, err = j.Client.Room.List(opt)
-			return attempt < 5, err // try 5 times
-		}, try.ExponentialJitterBackoff)
+		rooms, response, err = j.Client.Room.List(opt)
 
 		if err != nil {
 			j.Log.Errorf("Client.CreateClient returns an error %v", response)
@@ -126,15 +121,7 @@ func (j *Job) GetDaysSinceCreated(room *hipchat.Room) int {
 
 // GetRoomStats queries the hipchat api to get the RoomStatistics of the roomID
 func (j *Job) GetRoomStats(roomID int) (*hipchat.RoomStatistics, error) {
-	var stats *hipchat.RoomStatistics
-	var response *http.Response
-
-	err := try.DoWithBackoff(func(attempt int) (bool, error) {
-		var err error
-		stats, response, err = j.Client.Room.GetStatistics(strconv.Itoa(roomID))
-		return attempt < 5, err // try 5 times
-	}, try.ExponentialJitterBackoff)
-
+	stats, _, err := j.Client.Room.GetStatistics(strconv.Itoa(roomID))
 	return stats, err
 }
 
@@ -180,14 +167,9 @@ func (j *Job) ArchiveRoom(roomID int, daysSinceLastActive int) {
 	}
 }
 
+// GetRoom calls the hipchat api to get the full room object
 func (j *Job) GetRoom(roomID int) (*hipchat.Room, error) {
-	var room *hipchat.Room
-	err := try.DoWithBackoff(func(attempt int) (bool, error) {
-		var err error
-		room, _, err = j.Client.Room.Get(strconv.Itoa(roomID))
-		return attempt < 5, err // try 5 times
-	}, try.ExponentialJitterBackoff)
-
+	room, _, err := j.Client.Room.Get(strconv.Itoa(roomID))
 	return room, err
 }
 

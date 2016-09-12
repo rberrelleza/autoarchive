@@ -2,9 +2,6 @@
 	"ImportPath": "bitbucket.org/ramiroberrelleza/autoarchive",
 	"GoVersion": "go1.6",
 	"GodepVersion": "v71",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/model",
@@ -111,14 +108,13 @@
 			"Rev": "870344eeaa6c844027ac57cba3c926e0684e05cb"
 		},
 		{
-			"ImportPath": "github.com/rberrelleza/try",
-			"Comment": "v1-2-g07b43a6",
-			"Rev": "07b43a6bfb9cfb28601cee40b41e676f6e6961e3"
-		},
-		{
 			"ImportPath": "github.com/satori/go.uuid",
 			"Comment": "v1.0.0",
 			"Rev": "f9ab0dce87d815821e221626b772e3475a0d2749"
+		},
+		{
+			"ImportPath": "github.com/sethgrid/pester",
+			"Rev": "8053687f99650573b28fb75cddf3f295082704d7"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",
@@ -126,8 +122,8 @@
 		},
 		{
 			"ImportPath": "github.com/tbruyelle/hipchat-go/hipchat",
-			"Comment": "v1.1-44-gf8db42c",
-			"Rev": "f8db42c69e236ccc2151d36091a32c299b3f2bf2"
+			"Comment": "v1.1-45-g1b36d82",
+			"Rev": "1b36d8251100b9176de424710d341e00863d8717"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",

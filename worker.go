@@ -13,6 +13,7 @@ import (
 	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	machinery "github.com/RichardKnop/machinery/v1"
 	"github.com/satori/go.uuid"
+	"github.com/sethgrid/pester"
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
@@ -243,6 +244,12 @@ func (w Worker) getClient(tenant *tenant.Tenant) (*hipchat.Client, error) {
 
 	client := token.CreateClient()
 	client.BaseURL = baseURL
+
+	httpClient := pester.New()
+	httpClient.MaxRetries = 5
+	httpClient.Backoff = pester.ExponentialJitterBackoff
+	httpClient.KeepLog = true
+	client.SetHTTPClient(httpClient)
 
 	return client, nil
 }

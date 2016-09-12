@@ -188,12 +188,19 @@ func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int)
 			continue
 		}
 
+		daysSinceLastActive := -1
 		if roomStatistics.MessagesSent == 0 {
-			job.Log.Infof("Room %d doesn't have any messages sent, skipping for now", room.ID)
-			continue
+			r, err := job.GetRoom(room.ID)
+			if err != nil {
+				job.Log.Infof("Couldn't retrieve the room: %v", err)
+				continue
+			}
+
+			daysSinceLastActive = job.GetDaysSinceCreated(r)
+		} else {
+			daysSinceLastActive = job.GetDaysSinceLastActive(room.ID, roomStatistics)
 		}
 
-		daysSinceLastActive := job.GetDaysSinceLastActive(room.ID, roomStatistics)
 		if daysSinceLastActive == -1 {
 			job.TouchRoom(room.ID, threshold)
 		} else if job.ShouldArchiveRoom(room.ID, daysSinceLastActive, threshold) {

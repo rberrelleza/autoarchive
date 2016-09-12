@@ -108,6 +108,22 @@ func (j *Job) GetDaysSinceLastActive(roomID int, stats *hipchat.RoomStatistics) 
 	return deltaInDays
 }
 
+// GetDaysSinceCreated calculates how many days since the room was created
+// based on the current time and the value return from the Room hipchat API
+func (j *Job) GetDaysSinceCreated(room *hipchat.Room) int {
+	var deltaInDays = -1
+	created, err := time.Parse(timeFormat, room.Created)
+	if err != nil {
+		j.Log.Record("rid", room.ID).Errorf("Couldn't parse date error: %v", err)
+	} else {
+		delta := j.Clock.Now().Sub(created)
+		deltaInDays = int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware
+		j.Log.Record("rid", room.ID).Debugf("Was created and idle for %d days", deltaInDays)
+	}
+
+	return deltaInDays
+}
+
 // GetRoomStats queries the hipchat api to get the RoomStatistics of the roomID
 func (j *Job) GetRoomStats(roomID int) (*hipchat.RoomStatistics, error) {
 	var stats *hipchat.RoomStatistics
@@ -128,7 +144,7 @@ func (j *Job) ArchiveRoom(roomID int, daysSinceLastActive int) {
 	var response *http.Response
 	var room *hipchat.Room
 
-	room, err := j.getRoom(roomID)
+	room, err := j.GetRoom(roomID)
 
 	if err != nil {
 		j.Log.Record("rid", roomID).Errorf("Client.Room.Get returned an error %v", response)
@@ -164,7 +180,7 @@ func (j *Job) ArchiveRoom(roomID int, daysSinceLastActive int) {
 	}
 }
 
-func (j *Job) getRoom(roomID int) (*hipchat.Room, error) {
+func (j *Job) GetRoom(roomID int) (*hipchat.Room, error) {
 	var room *hipchat.Room
 	err := try.DoWithBackoff(func(attempt int) (bool, error) {
 		var err error

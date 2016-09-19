@@ -248,7 +248,7 @@ func (w Worker) getClient(tenant *tenant.Tenant) (*hipchat.Client, error) {
 	client.BaseURL = baseURL
 
 	httpClient := pester.New()
-	httpClient.MaxRetries = 5
+	httpClient.MaxRetries = 10
 	httpClient.Backoff = pester.ExponentialJitterBackoff
 	httpClient.KeepLog = true
 	httpClient.Success = func(resp *http.Response, err error) bool {

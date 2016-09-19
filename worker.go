@@ -18,6 +18,7 @@ import (
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
+// WorkerQueue keeps all the jobs to be executed
 var WorkerQueue chan chan WorkRequest
 
 // StartWorker starts the worker jobs of the process. It will start a number of workers equal to the value of the WORKERS_ENV env var, or 1
@@ -251,8 +252,12 @@ func (w Worker) getClient(tenant *tenant.Tenant) (*hipchat.Client, error) {
 	httpClient.Backoff = pester.ExponentialJitterBackoff
 	httpClient.KeepLog = true
 	httpClient.Success = func(resp *http.Response, err error) bool {
-		w.Log.Infof("Got an error on the request: %v | %v", err, resp.StatusCode)
-		return err == nil && resp.StatusCode < 500 && resp.StatusCode != 429
+
+		success := err == nil && resp.StatusCode < 500 && resp.StatusCode != 429
+		if !success {
+			w.Log.Infof("Got an error on the request: %v | %v", err, resp.StatusCode)
+		}
+		return success
 	}
 
 	client.SetHTTPClient(httpClient)

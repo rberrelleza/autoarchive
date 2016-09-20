@@ -9,6 +9,9 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
+
+	"gopkg.in/inconshreveable/go-keen.v0"
 
 	"bitbucket.org/rbergman/go-hipchat-connect/tenant"
 	"bitbucket.org/rbergman/go-hipchat-connect/util"
@@ -20,6 +23,14 @@ import (
 
 // WorkerQueue keeps all the jobs to be executed
 var WorkerQueue chan chan WorkRequest
+
+const keenFlushInterval = 10 * time.Second
+
+type archivedEvent struct {
+	TenantID  string
+	Archived  int
+	Processed int
+}
 
 // StartWorker starts the worker jobs of the process. It will start a number of workers equal to the value of the WORKERS_ENV env var, or 1
 func StartWorker() {
@@ -154,6 +165,20 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 
 				job.Client = client
 				processedRooms, archivedRooms := w.autoArchiveRooms(&job, tenantConfiguration.Threshold, maxRoomsToProcess)
+
+				keeyAPIKey := util.Env.GetString("KEEN_READ_KEY")
+				keeyProjectID := util.Env.GetString("KEEN_PROJECT_ID")
+
+				if keeyAPIKey != "" {
+					job.Log.Infof("Sending resulting data to keen")
+					keenClient := &keen.Client{ApiKey: keeyAPIKey, ProjectToken: keeyProjectID}
+					keenClient.AddEvent("tenant-archived", &archivedEvent{
+						TenantID:  tenantConfiguration.ID,
+						Archived:  archivedRooms,
+						Processed: processedRooms,
+					})
+				}
+
 				job.Log.Infof("Finished work request, archived %d/%d rooms", archivedRooms, processedRooms)
 
 			case <-w.QuitChan:
@@ -207,8 +232,10 @@ func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int)
 		if daysSinceLastActive == -1 {
 			job.TouchRoom(room.ID, threshold)
 		} else if job.ShouldArchiveRoom(room.ID, daysSinceLastActive, threshold) {
-			job.ArchiveRoom(room.ID, daysSinceLastActive)
-			archivedRooms++
+			err := job.ArchiveRoom(room.ID, daysSinceLastActive)
+			if err != nil {
+				archivedRooms++
+			}
 		}
 
 		processedRooms++

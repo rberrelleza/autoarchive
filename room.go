@@ -127,7 +127,7 @@ func (j *Job) GetRoomStats(roomID int) (*hipchat.RoomStatistics, error) {
 
 // ArchiveRoom calls the hipchat API to archive the room. It sends a message while archiving so the owner of the room will know what
 // happened to her room.
-func (j *Job) ArchiveRoom(roomID int, daysSinceLastActive int) {
+func (j *Job) ArchiveRoom(roomID int, daysSinceLastActive int) error {
 	var response *http.Response
 	var room *hipchat.Room
 
@@ -135,7 +135,7 @@ func (j *Job) ArchiveRoom(roomID int, daysSinceLastActive int) {
 
 	if err != nil {
 		j.Log.Record("rid", roomID).Errorf("Client.Room.Get returned an error %v", response)
-		return
+		return err
 	}
 
 	room.IsArchived = true
@@ -151,6 +151,7 @@ func (j *Job) ArchiveRoom(roomID int, daysSinceLastActive int) {
 
 	message := fmt.Sprintf("Archiving the room since it has been inactive for %d days. Go to %s/rooms/archive/%d to unarchive it.", daysSinceLastActive, j.HipChatURL, roomID)
 
+	err = nil
 	if j.DryRun {
 		j.Log.Record("rid", roomID).Infof("Would've archived: %s", message)
 	} else {
@@ -159,12 +160,14 @@ func (j *Job) ArchiveRoom(roomID int, daysSinceLastActive int) {
 
 		if err != nil {
 			j.Log.Record("rid", roomID).Errorf("Client.Room.Update returned an error when archiving")
-			contents, err := ioutil.ReadAll(resp.Body)
+			contents, _ := ioutil.ReadAll(resp.Body)
 			j.Log.Record("rid", roomID).Errorf("%s %s", contents, err)
 		} else {
 			j.Log.Record("rid", roomID).Infof("Archived room, idle for %d days", daysSinceLastActive)
 		}
 	}
+
+	return err
 }
 
 // GetRoom calls the hipchat api to get the full room object

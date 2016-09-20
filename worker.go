@@ -162,7 +162,7 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 				client, err := w.getClient(tenant)
 				if err != nil {
 					// this typically means the group uninstalled the plugin
-					w.Log.Errorf("Client.GetAccessToken returns an error %v", err)
+					w.Log.Errorf("Client.GetAccessToken returned an error %v", err)
 					continue
 				}
 
@@ -170,25 +170,7 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 				processedRooms, archivedRooms := w.autoArchiveRooms(&job, tenantConfiguration.Threshold, maxRoomsToProcess)
 				elapsedTime := time.Since(startTime)
 
-				keeyAPIKey := util.Env.GetString("KEEN_WRITE_KEY")
-				keeyProjectID := util.Env.GetString("KEEN_PROJECT_ID")
-
-				if keeyAPIKey != "" {
-					job.Log.Infof("Sending resulting data to keen")
-					keenClient := &keen.Client{ApiKey: keeyAPIKey, ProjectToken: keeyProjectID}
-					err := keenClient.AddEvent("tenant-archived", &archivedEvent{
-						TenantID:  tenantConfiguration.ID,
-						Archived:  archivedRooms,
-						Processed: processedRooms,
-						Duration:  elapsedTime.Seconds(),
-					})
-
-					if err != nil {
-						job.Log.Errorf("Error when sending information to keen: %v", err)
-					} else {
-						job.Log.Infof("Sent data to keen")
-					}
-				}
+				w.sendAnalytics(work.TenantID, archivedRooms, processedRooms, elapsedTime)
 
 				job.Log.Infof("Finished work request, archived %d/%d rooms, it took %.2f seconds", archivedRooms, processedRooms, elapsedTime.Seconds())
 
@@ -244,8 +226,10 @@ func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int)
 			job.TouchRoom(room.ID, threshold)
 		} else if job.ShouldArchiveRoom(room.ID, daysSinceLastActive, threshold) {
 			err := job.ArchiveRoom(room.ID, daysSinceLastActive)
-			if err != nil {
+			if err == nil {
 				archivedRooms++
+			} else {
+				job.Log.Errorf("Error when archiving rid-%d: %v", room.ID, err)
 			}
 		}
 
@@ -293,7 +277,7 @@ func (w Worker) getClient(tenant *tenant.Tenant) (*hipchat.Client, error) {
 
 		success := err == nil && resp.StatusCode < 500 && resp.StatusCode != 429
 		if !success {
-			w.Log.Infof("Got an error on the request: %v | %v", err, resp.StatusCode)
+			w.Log.Debugf("Got an error on the request: %v | %v", err, resp.StatusCode)
 		}
 		return success
 	}
@@ -309,6 +293,28 @@ func (w Worker) stop() {
 	go func() {
 		w.QuitChan <- true
 	}()
+}
+
+func (w Worker) sendAnalytics(tenantID string, archivedRooms int, processedRooms int, elaspsed time.Duration) {
+	keeyAPIKey := util.Env.GetString("KEEN_WRITE_KEY")
+	keeyProjectID := util.Env.GetString("KEEN_PROJECT_ID")
+
+	if keeyAPIKey != "" {
+		w.Log.Infof("Sending resulting data to keen")
+		keenClient := &keen.Client{ApiKey: keeyAPIKey, ProjectToken: keeyProjectID}
+		err := keenClient.AddEvent("tenant-archived", &archivedEvent{
+			TenantID:  tenantID,
+			Archived:  archivedRooms,
+			Processed: processedRooms,
+			Duration:  elaspsed.Seconds(),
+		})
+
+		if err == nil {
+			w.Log.Infof("Sent data to keen")
+		} else {
+			w.Log.Errorf("Error when sending information to keen: %v", err)
+		}
+	}
 }
 
 // Machinery requires to return a (interface{}, error) even if we don't handle

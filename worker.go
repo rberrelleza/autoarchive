@@ -30,6 +30,7 @@ type archivedEvent struct {
 	TenantID  string
 	Archived  int
 	Processed int
+	Duration  float64
 }
 
 // StartWorker starts the worker jobs of the process. It will start a number of workers equal to the value of the WORKERS_ENV env var, or 1
@@ -129,6 +130,8 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 			select {
 			case work := <-w.Work:
 				// Receive a work request.
+				startTime := time.Now()
+
 				jobID := uuid.NewV4().String()
 				w.Log.Infof("worker%d: Received work request for tid-%s", w.ID, work.TenantID)
 
@@ -165,6 +168,7 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 
 				job.Client = client
 				processedRooms, archivedRooms := w.autoArchiveRooms(&job, tenantConfiguration.Threshold, maxRoomsToProcess)
+				elapsedTime := time.Since(startTime)
 
 				keeyAPIKey := util.Env.GetString("KEEN_READ_KEY")
 				keeyProjectID := util.Env.GetString("KEEN_PROJECT_ID")
@@ -176,10 +180,11 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 						TenantID:  tenantConfiguration.ID,
 						Archived:  archivedRooms,
 						Processed: processedRooms,
+						Duration:  elapsedTime.Seconds(),
 					})
 				}
 
-				job.Log.Infof("Finished work request, archived %d/%d rooms", archivedRooms, processedRooms)
+				job.Log.Infof("Finished work request, archived %d/%d rooms, it took %.2f seconds", archivedRooms, processedRooms, elapsedTime.Seconds())
 
 			case <-w.QuitChan:
 				// We have been asked to stop.

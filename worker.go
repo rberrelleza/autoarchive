@@ -170,18 +170,24 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 				processedRooms, archivedRooms := w.autoArchiveRooms(&job, tenantConfiguration.Threshold, maxRoomsToProcess)
 				elapsedTime := time.Since(startTime)
 
-				keeyAPIKey := util.Env.GetString("KEEN_READ_KEY")
+				keeyAPIKey := util.Env.GetString("KEEN_WRITE_KEY")
 				keeyProjectID := util.Env.GetString("KEEN_PROJECT_ID")
 
 				if keeyAPIKey != "" {
 					job.Log.Infof("Sending resulting data to keen")
 					keenClient := &keen.Client{ApiKey: keeyAPIKey, ProjectToken: keeyProjectID}
-					keenClient.AddEvent("tenant-archived", &archivedEvent{
+					err := keenClient.AddEvent("tenant-archived", &archivedEvent{
 						TenantID:  tenantConfiguration.ID,
 						Archived:  archivedRooms,
 						Processed: processedRooms,
 						Duration:  elapsedTime.Seconds(),
 					})
+
+					if err != nil {
+						job.Log.Errorf("Error when sending information to keen: %v", err)
+					} else {
+						job.Log.Infof("Sent data to keen")
+					}
 				}
 
 				job.Log.Infof("Finished work request, archived %d/%d rooms, it took %.2f seconds", archivedRooms, processedRooms, elapsedTime.Seconds())

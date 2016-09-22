@@ -122,8 +122,8 @@
 		},
 		{
 			"ImportPath": "github.com/tbruyelle/hipchat-go/hipchat",
-			"Comment": "v1.1-45-g1b36d82",
-			"Rev": "1b36d8251100b9176de424710d341e00863d8717"
+			"Comment": "v1.2",
+			"Rev": "749fb9e14beb9995f677c101a754393cecb64b0f"
 		},
 		{
 			"ImportPath": "gopkg.in/inconshreveable/go-keen.v0",

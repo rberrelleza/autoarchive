@@ -111,6 +111,7 @@ func (j *Job) GetDaysSinceCreated(room *hipchat.Room) int {
 	if err != nil {
 		j.Log.Record("rid", room.ID).Errorf("Couldn't parse date error: %v", err)
 	} else {
+		// TODO pass the JobID and the Time, so we don't deal with objects here
 		delta := j.Clock.Now().Sub(created)
 		deltaInDays = int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware
 		j.Log.Record("rid", room.ID).Debugf("Was created and idle for %d days", deltaInDays)

@@ -159,15 +159,7 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 					DryRun:     util.Env.GetInt("DRYRUN_ENV") == 1,
 				}
 
-				client, err := w.getClient(tenant)
-				if err != nil {
-					// this typically means the group uninstalled the plugin
-					w.Log.Errorf("Client.GetAccessToken returned an error %v", err)
-					continue
-				}
-
-				job.Client = client
-				processedRooms, archivedRooms := w.autoArchiveRooms(&job, tenantConfiguration.Threshold, maxRoomsToProcess)
+				processedRooms, archivedRooms := w.autoArchiveRooms(&job, tenantConfiguration.Threshold, maxRoomsToProcess, startTime, tenant)
 				elapsedTime := time.Since(startTime)
 
 				w.sendAnalytics(work.TenantID, archivedRooms, processedRooms, elapsedTime)
@@ -183,7 +175,19 @@ func (w Worker) start(s *Server, wg *sync.WaitGroup, maxRoomsToProcess int) {
 	}()
 }
 
-func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int) (int, int) {
+func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int, startTime time.Time, tenant *tenant.Tenant) (int, int) {
+
+	processedRooms := 0
+	archivedRooms := 0
+
+	client, err := w.getClient(tenant)
+	if err != nil {
+		// this typically means the group uninstalled the plugin
+		w.Log.Errorf("Couldn't get a token: %v", err)
+		return processedRooms, archivedRooms
+	}
+
+	job.Client = client
 
 	rooms, err := job.GetRooms()
 
@@ -198,10 +202,21 @@ func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int)
 		rooms[i], rooms[j] = rooms[j], rooms[i]
 	}
 
-	processedRooms := 0
-	archivedRooms := 0
-
 	for _, room := range rooms {
+
+		elapsedTime := time.Since(startTime)
+		if elapsedTime.Seconds() > 3000 {
+			// We need to refresh the token every hour
+			w.Log.Infof("Renewing client, since it's been %f seconds", elapsedTime.Seconds())
+			client, err := w.getClient(tenant)
+			if err != nil {
+				w.Log.Errorf("Failed to refresh the client token: %v", err)
+				break
+			}
+
+			job.Client = client
+		}
+
 		roomStatistics, err := job.GetRoomStats(room.ID)
 
 		if err != nil {

@@ -215,6 +215,7 @@ func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int,
 			}
 
 			job.Client = client
+			startTime = time.Now()
 		}
 
 		roomStatistics, err := job.GetRoomStats(room.ID)

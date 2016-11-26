@@ -1,7 +1,10 @@
 {
 	"ImportPath": "bitbucket.org/ramiroberrelleza/autoarchive",
-	"GoVersion": "go1.6",
+	"GoVersion": "go1.7",
 	"GodepVersion": "v71",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/model",
@@ -106,6 +109,11 @@
 		{
 			"ImportPath": "github.com/pilu/xrequestid",
 			"Rev": "870344eeaa6c844027ac57cba3c926e0684e05cb"
+		},
+		{
+			"ImportPath": "github.com/robfig/cron",
+			"Comment": "v1-47-g9585fd5",
+			"Rev": "9585fd555638e77bba25f25db5c44b41f264aeb7"
 		},
 		{
 			"ImportPath": "github.com/satori/go.uuid",

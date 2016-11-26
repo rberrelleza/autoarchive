@@ -2,11 +2,15 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"sync"
 
 	"bitbucket.org/rbergman/go-hipchat-connect/store"
 	"bitbucket.org/rbergman/go-hipchat-connect/util"
 	"github.com/RichardKnop/machinery/v1/signatures"
 	"github.com/garyburd/redigo/redis"
+	"github.com/robfig/cron"
 )
 
 // StartScheduler schedules one job per tenant registered
@@ -14,7 +18,30 @@ func StartScheduler() {
 	b := NewBackendServer("hiparchiver.scheduler")
 
 	b.Log.Infof("Starting the scheduler")
-	b.scheduleTasks()
+	durationStr := util.Env.GetString("SCHEDULER_DURATION")
+
+	if durationStr == "" {
+		b.scheduleTasks()
+	} else {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		interrupt := make(chan os.Signal, 1)
+		signal.Notify(interrupt, os.Interrupt)
+		c := cron.New()
+		defer c.Stop()
+		c.AddFunc("@every "+durationStr, func() { b.scheduleTasks() })
+		b.Log.Infof("Adding task to local scheduler, to run every %s", durationStr)
+		c.Start()
+
+		go func() {
+			b.Log.Infof("Running local scheduler, press CTRL+C to terminate")
+			<-interrupt
+			wg.Done()
+		}()
+
+		b.Log.Infof("calling wait")
+		wg.Wait()
+	}
 }
 
 func (s *Server) scheduleTasks() {
@@ -47,7 +74,6 @@ func (s *Server) scheduleTasks() {
 		if err != nil {
 			s.Log.Errorf("Failed to schedule task for tid-%s: %s", tenantID, err)
 		}
-
 	}
 }
 

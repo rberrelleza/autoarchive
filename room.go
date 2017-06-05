@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tbruyelle/hipchat-go/hipchat"
@@ -13,6 +14,10 @@ import (
 const (
 	// See http://golang.org/pkg/time/#Parse
 	timeFormat = "2006-01-02T15:04:05+00:00"
+)
+
+const (
+	topic = "do not archive"
 )
 
 type options struct {
@@ -59,12 +64,18 @@ func (j *Job) GetRooms() ([]hipchat.Room, error) {
 }
 
 // ShouldArchiveRoom returns true if a rooom has been inactive for longer than the threshold
-func (j *Job) ShouldArchiveRoom(roomID, daysSinceLastActive, threshold int) bool {
+func (j *Job) ShouldArchiveRoom(roomID, daysSinceLastActive, threshold int, roomTopic string) bool {
 	shouldArchive := false
 
-	remainingIdleDaysAllowed := daysSinceLastActive - threshold
-	if remainingIdleDaysAllowed >= 0 {
-		shouldArchive = true
+	s := strings.ToLower(roomTopic)
+
+	if strings.Contains(s, topic) {
+		j.Log.Record("rid", roomID).Infof("Skipping due to topic overwrite")
+	} else {
+		remainingIdleDaysAllowed := daysSinceLastActive - threshold
+		if remainingIdleDaysAllowed >= 0 {
+			shouldArchive = true
+		}
 	}
 
 	return shouldArchive

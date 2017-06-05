@@ -240,7 +240,7 @@ func (w Worker) autoArchiveRooms(job *Job, threshold int, maxRoomsToProcess int,
 
 		if daysSinceLastActive == -1 {
 			job.TouchRoom(room.ID, threshold)
-		} else if job.ShouldArchiveRoom(room.ID, daysSinceLastActive, threshold) {
+		} else if job.ShouldArchiveRoom(room.ID, daysSinceLastActive, threshold, room.Topic) {
 			err := job.ArchiveRoom(room.ID, daysSinceLastActive)
 			if err == nil {
 				archivedRooms++

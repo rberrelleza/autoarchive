@@ -15,8 +15,9 @@
                 <form  class="aui" id="form" method="POST">
                   <label for="threshold">Automatically archive your rooms after they haven't been used for:</label>
                   <select class="select medium-field" id="threshold" name="threshold">
+                    <option value="1" {{if eq  "1" .Threshold}}selected{{end}}>1 day</option>
                     <option value="7" {{if eq  "7" .Threshold}}selected{{end}}>7 days</option>
-                    <option value="15" {{if eq "15" .Threshold}}selected{{end}}>15 days</option>
+                    <option value="14" {{if eq "14" .Threshold}}selected{{end}}>14 days</option>
                     <option value="30" {{if eq "30" .Threshold}}selected{{end}}>30 days</option>
                     <option value="45" {{if eq "45" .Threshold}}selected{{end}}>45 days</option>
                     <option value="90" {{if eq "90" .Threshold}}selected{{end}}>90 days</option>

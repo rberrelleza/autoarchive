@@ -1,13 +1,14 @@
 {
-  "name": "hc-autoarchiver",
-  "description": "HipChat Auto Archiver Addon",
-  "keywords": [
-    "go",
-    "hipchat"
-  ],
-  "addons": [ "heroku-redis" ],
-  "image": "heroku/go:1.6",
-  "mount_dir": "src/bitbucket.org/ramiroberrelleza/autoarchive",
-  "website": "https://bitbucket.org/ramiroberrelleza/autoarchive",
-  "repository": "https://bitbucket.org/ramiroberrelleza/autoarchive"
+    "name": "hc-autoarchiver",
+    "description": "HipChat Auto Archiver Addon",
+    "keywords": [
+        "go",
+        "hipchat"
+    ],
+    "stack": "heroku-16",
+    "addons": ["heroku-redis"],
+    "image": "heroku/go:1.6",
+    "mount_dir": "src/bitbucket.org/ramiroberrelleza/autoarchive",
+    "website": "https://bitbucket.org/ramiroberrelleza/autoarchive",
+    "repository": "https://bitbucket.org/ramiroberrelleza/autoarchive"
 }

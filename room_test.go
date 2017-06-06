@@ -81,3 +81,31 @@ func TestGetDaysSinceCreated(t *testing.T) {
 		}
 	}
 }
+
+func TestShouldArchiveRoomTopic(t *testing.T) {
+	var shouldArchiveTests = []struct {
+		topic               string
+		shouldArchive       bool
+		daysSincelastActive int
+	}{
+		{"do not archive", false, 10},
+		{"A valid topic | do not archive", false, 10},
+		{"archive now", true, 10},
+		{"archive now", false, 1},
+		{"", true, 10},
+	}
+
+	for _, tt := range shouldArchiveTests {
+
+		mockJob := Job{
+			Log:      bunyan.NewStdLogger("test", bunyan.NilSink()),
+			JobID:    "jobId",
+			TenantID: "work.TenantID",
+		}
+
+		shouldArchive := mockJob.ShouldArchiveRoom(1, tt.daysSincelastActive, 7, tt.topic)
+		if shouldArchive != tt.shouldArchive {
+			t.Error(fmt.Sprintf("ShouldArchiveRoom was wrong. Expected=%v Actual=%v Topic=%s", tt.shouldArchive, shouldArchive, tt.topic))
+		}
+	}
+}

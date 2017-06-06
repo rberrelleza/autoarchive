@@ -90,6 +90,8 @@ func TestShouldArchiveRoomTopic(t *testing.T) {
 	}{
 		{"do not archive", false, 10},
 		{"A valid topic | do not archive", false, 10},
+		{"A valid topic | DO NOT ARCHIVE", false, 10},
+		{"A valid topic with uñicode | DO NOT ARCHIVE", false, 10},
 		{"archive now", true, 10},
 		{"archive now", false, 1},
 		{"", true, 10},

@@ -34,6 +34,7 @@ func (j *Job) GetRooms() ([]hipchat.Room, error) {
 		var rooms *hipchat.Rooms
 		opt := &hipchat.RoomsListOptions{
 			ListOptions:     hipchat.ListOptions{StartIndex: startIndex, MaxResults: maxResults},
+			ExpandOptions:   hipchat.ExpandOptions{Expand: "items"},
 			IncludePrivate:  true,
 			IncludeArchived: false}
 

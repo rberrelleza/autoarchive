@@ -98,6 +98,7 @@ type ListOptions struct {
 // cf:  https://developer.atlassian.com/hipchat/guide/hipchat-rest-api/api-title-expansion
 type ExpandOptions struct {
 	Expand string `url:"expand,omitempty"`
+	Fields string `url:"fields,omitempty"`
 }
 
 // Color is set of hard-coded string values for the HipChat API for notifications.

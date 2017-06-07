@@ -34,7 +34,7 @@ func (j *Job) GetRooms() ([]hipchat.Room, error) {
 		var rooms *hipchat.Rooms
 		opt := &hipchat.RoomsListOptions{
 			ListOptions:     hipchat.ListOptions{StartIndex: startIndex, MaxResults: maxResults},
-			ExpandOptions:   hipchat.ExpandOptions{Expand: "items"},
+			ExpandOptions:   hipchat.ExpandOptions{Expand: "items", Fields: "id,is_archived,name,topic,created"},
 			IncludePrivate:  true,
 			IncludeArchived: false}
 
@@ -112,16 +112,16 @@ func (j *Job) GetDaysSinceLastActive(roomID int, stats *hipchat.RoomStatistics) 
 
 // GetDaysSinceCreated calculates how many days since the room was created
 // based on the current time and the value return from the Room hipchat API
-func (j *Job) GetDaysSinceCreated(room *hipchat.Room) int {
+func (j *Job) GetDaysSinceCreated(roomID int, roomCreated string) int {
 	var deltaInDays = -1
-	created, err := time.Parse(timeFormat, room.Created)
+	created, err := time.Parse(timeFormat, roomCreated)
 	if err != nil {
-		j.Log.Record("rid", room.ID).Errorf("Couldn't parse date error: %v", err)
+		j.Log.Record("rid", roomID).Errorf("Couldn't parse date error: %v", err)
 	} else {
 		// TODO pass the JobID and the Time, so we don't deal with objects here
 		delta := j.Clock.Now().Sub(created)
 		deltaInDays = int(delta.Hours() / 24) //assumes every day has 24 hours, not DST aware
-		j.Log.Record("rid", room.ID).Debugf("Was created and idle for %d days", deltaInDays)
+		j.Log.Record("rid", roomID).Debugf("Was created and idle for %d days", deltaInDays)
 	}
 
 	return deltaInDays

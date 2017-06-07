@@ -75,7 +75,7 @@ func TestGetDaysSinceCreated(t *testing.T) {
 			Clock:    &testClock{tt.now},
 		}
 
-		daysSincelastActive := mockJob.GetDaysSinceCreated(&mockRoom)
+		daysSincelastActive := mockJob.GetDaysSinceCreated(mockRoom.ID, mockRoom.Created)
 		if daysSincelastActive != tt.expected {
 			t.Error(fmt.Sprintf("getDaysSinceLastActive calculation was wrong. Expected=%d Actual=%d", tt.expected, daysSincelastActive))
 		}

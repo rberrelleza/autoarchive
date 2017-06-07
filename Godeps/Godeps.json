@@ -1,7 +1,10 @@
 {
 	"ImportPath": "bitbucket.org/ramiroberrelleza/autoarchive",
 	"GoVersion": "go1.7",
-	"GodepVersion": "v71",
+	"GodepVersion": "v79",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "bitbucket.org/rbergman/go-hipchat-connect/model",
@@ -127,8 +130,8 @@
 		},
 		{
 			"ImportPath": "github.com/tbruyelle/hipchat-go/hipchat",
-			"Comment": "v1.2",
-			"Rev": "749fb9e14beb9995f677c101a754393cecb64b0f"
+			"Comment": "v1.2-13-gfc34536",
+			"Rev": "fc3453606408cfa87015e65ecb3309f9d1678317"
 		},
 		{
 			"ImportPath": "gopkg.in/inconshreveable/go-keen.v0",

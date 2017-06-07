@@ -20,11 +20,6 @@ const (
 	topic = "do not archive"
 )
 
-type options struct {
-	StartIndex int `url:"start-index"`
-	MaxResults int `url:"max-results"`
-}
-
 // GetRooms retrieves all the active rooms for a specific tenant. This function calls the HipChat /room API, batching
 // results in groups of 1000.
 // It returns a list of rooms, and or any errors.
